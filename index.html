@@ -89,6 +89,35 @@
     .dark .leaflet-container {
       background: #0f172a !important;
     }
+
+    /* Custom Map Markers & Tooltips for Video Clarity */
+    .custom-live-truck-marker, .custom-alert-truck-marker {
+      background: transparent !important;
+      border: none !important;
+    }
+    .milestone-tooltip {
+      background: #0f172a !important;
+      color: #f8fafc !important;
+      border: 1px solid #334155 !important;
+      border-radius: 6px !important;
+      font-size: 10px !important;
+      font-weight: 700 !important;
+      padding: 3px 7px !important;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.35) !important;
+    }
+    .milestone-tooltip::before {
+      border-top-color: #0f172a !important;
+    }
+    .leaflet-popup-content-wrapper {
+      background: #0f172a !important;
+      color: #ffffff !important;
+      border-radius: 12px !important;
+      border: 1px solid rgba(255,255,255,0.15) !important;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5) !important;
+    }
+    .leaflet-popup-tip {
+      background: #0f172a !important;
+    }
   </style>
 </head>
 <body class="h-full flex overflow-hidden bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100">
@@ -302,35 +331,108 @@
           </div>
         </div>
 
-        <!-- MAIN 3-COLUMN SECTION -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <!-- MAIN 3-COLUMN / EXPANDABLE SECTION -->
+        <div id="main-telemetry-grid" class="grid grid-cols-1 lg:grid-cols-12 gap-5 transition-all duration-300">
 
-          <!-- LEFT: LIVE MAP (5 cols) -->
-          <div class="lg:col-span-5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm">
+          <!-- LEFT: LIVE MAP (6 cols in normal mode, 12 cols in expanded mode) -->
+          <div id="map-card-container" class="lg:col-span-6 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm transition-all duration-300">
             <div>
-              <div class="flex items-center justify-between mb-3">
+              <!-- Map Card Header & Live Controls -->
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
                 <div class="flex items-center space-x-2">
-                  <i data-lucide="map" class="w-4 h-4 text-blue-600 dark:text-blue-400"></i>
-                  <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">Peta Pergerakan Kendaraan</h3>
+                  <div class="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-950/70 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                    <i data-lucide="map" class="w-4 h-4"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-1.5">
+                      Peta Pergerakan Driver & GPS Live
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-400 animate-pulse">LIVE TRACKING</span>
+                    </h3>
+                    <p class="text-[10px] text-slate-500 dark:text-slate-400">Koridor Tol Trans Jawa (Jakarta &bull; Karawang &bull; Cipali &bull; Bandung)</p>
+                  </div>
                 </div>
-                <div class="flex items-center space-x-2 text-[10px]">
-                  <span class="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Normal</span>
-                  <span class="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Warning</span>
+
+                <!-- Camera Presets & Expand Buttons -->
+                <div class="flex items-center flex-wrap gap-1.5 text-xs">
+                  <!-- Focus B 9388 TXW -->
+                  <button onclick="focusTruck('B 9388 TXW')" class="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-900 hover:bg-blue-50 dark:hover:bg-blue-950/60 text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 border border-slate-200 dark:border-slate-800 text-[11px] font-semibold transition-colors flex items-center gap-1" title="Fokus Zoom ke Truk B 9388 TXW (KM 42)">
+                    <span>🎯 B 9388</span>
+                  </button>
+                  <!-- Focus B 9587 TXW -->
+                  <button onclick="focusTruck('B 9587 TXW')" class="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-900 hover:bg-teal-50 dark:hover:bg-teal-950/60 text-slate-700 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 border border-slate-200 dark:border-slate-800 text-[11px] font-semibold transition-colors flex items-center gap-1" title="Fokus Zoom ke Truk B 9587 TXW (KM 79)">
+                    <span>🎯 B 9587</span>
+                  </button>
+                  <!-- Auto-Follow Camera Toggle -->
+                  <button id="btn-auto-follow" onclick="toggleAutoFollow()" class="px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 text-[11px] font-bold transition-all flex items-center gap-1" title="Kamera otomatis mengikuti laju gerak truk">
+                    <span id="follow-icon" class="w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400 animate-ping"></span>
+                    <span id="follow-text">Ikuti Gerak</span>
+                  </button>
+                  <!-- Expand/Maximize Map Button -->
+                  <button id="btn-expand-map" onclick="toggleExpandMap()" class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] transition-all shadow-sm flex items-center gap-1.5" title="Lebarkan Peta agar lebih besar dan luas di video">
+                    <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+                    <span id="expand-map-text">Lebarkan Peta</span>
+                  </button>
                 </div>
               </div>
 
-              <!-- Leaflet Map Container -->
-              <div id="live-map" class="w-full h-72 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800"></div>
+              <!-- Leaflet Map Container with Floating HUD Controls -->
+              <div class="relative w-full rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-inner group">
+                <!-- Map Container -->
+                <div id="live-map" class="w-full h-96 lg:h-[450px] transition-all duration-300"></div>
+
+                <!-- On-Map Floating Glassmorphism Zoom Controls -->
+                <div class="absolute top-3 right-3 z-[400] flex flex-col gap-1 shadow-lg bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-lg p-1 border border-slate-200/80 dark:border-slate-700/80">
+                  <button onclick="zoomMapIn()" class="w-8 h-8 flex items-center justify-center rounded text-slate-700 dark:text-slate-200 hover:bg-blue-600 hover:text-white font-bold text-sm transition-colors" title="Perbesar Zoom (+)">
+                    +
+                  </button>
+                  <div class="h-px bg-slate-200 dark:bg-slate-700"></div>
+                  <button onclick="zoomMapOut()" class="w-8 h-8 flex items-center justify-center rounded text-slate-700 dark:text-slate-200 hover:bg-blue-600 hover:text-white font-bold text-sm transition-colors" title="Perkecil Zoom (-)">
+                    &minus;
+                  </button>
+                  <div class="h-px bg-slate-200 dark:bg-slate-700"></div>
+                  <button onclick="recenterMap()" class="w-8 h-8 flex items-center justify-center rounded text-slate-700 dark:text-slate-200 hover:bg-blue-600 hover:text-white text-xs transition-colors" title="Reset View Seluruh Rute">
+                    🗺️
+                  </button>
+                </div>
+
+                <!-- Floating Live Telemetry HUD Bar (Bottom Overlay) -->
+                <div class="absolute bottom-3 left-3 right-3 z-[400] bg-slate-900/90 dark:bg-slate-950/95 backdrop-blur-md text-white px-3.5 py-2.5 rounded-xl border border-slate-700/80 shadow-2xl flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <div class="flex items-center space-x-3">
+                    <div class="flex items-center gap-1.5 font-bold">
+                      <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                      <span id="hud-plate" class="text-emerald-400 text-sm font-black tracking-wide">B 9388 TXW</span>
+                    </div>
+                    <span class="text-slate-500">|</span>
+                    <span id="hud-driver" class="text-slate-200 font-medium">Mohamad Nursyam</span>
+                    <span class="text-slate-500">|</span>
+                    <span id="hud-location" class="text-slate-300 font-mono">Tol KM 42 (Karawang)</span>
+                  </div>
+                  <div class="flex items-center space-x-3 text-[11px]">
+                    <div>Kecepatan: <strong id="hud-speed" class="text-emerald-400 font-mono">65 km/h</strong></div>
+                    <span class="text-slate-500">&bull;</span>
+                    <div>Suhu: <strong id="hud-temp" class="text-emerald-400 font-mono">-18.2°C</strong></div>
+                    <span class="text-slate-500">&bull;</span>
+                    <div>GPS: <span id="hud-coords" class="font-mono text-slate-400">-6.3718, 107.3188</span></div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div class="mt-3 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800">
-              <span>Rute: <strong class="text-slate-800 dark:text-slate-200">Jakarta &rarr; Cikampek &rarr; Bandung</strong></span>
-              <button onclick="recenterMap()" class="text-blue-600 dark:text-blue-400 hover:underline text-[11px] font-medium">Reset View</button>
+            <!-- Map Bottom Route Info Strip -->
+            <div class="mt-3 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
+              <div class="flex items-center gap-2">
+                <i data-lucide="route" class="w-4 h-4 text-blue-600 dark:text-blue-400"></i>
+                <span>Koridor Aktif: <strong class="text-slate-800 dark:text-slate-200">Rute 1 (Jkt &rarr; Bdg KM 42) &bull; Rute 2 (Jkt &rarr; Crb KM 79)</strong></span>
+              </div>
+              <div class="flex items-center space-x-3 text-[11px]">
+                <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Jalur CDE</span>
+                <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-teal-500"></span> Jalur CDD</span>
+              </div>
             </div>
           </div>
 
-          <!-- MIDDLE: DETAIL KENDARAAN (4 cols) -->
-          <div class="lg:col-span-4 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm">
+          <!-- MIDDLE: DETAIL KENDARAAN (3 cols in normal mode, 6 cols in expand mode) -->
+          <div id="detail-card-container" class="lg:col-span-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm transition-all duration-300">
             <div>
               <!-- Header & Selector -->
               <div class="flex items-center justify-between mb-3">
@@ -404,8 +506,8 @@
             </div>
           </div>
 
-          <!-- RIGHT: TEMPERATURE & REEFER (3 cols) -->
-          <div class="lg:col-span-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm">
+          <!-- RIGHT: TEMPERATURE & REEFER (3 cols in normal mode, 6 cols in expand mode) -->
+          <div id="temp-card-container" class="lg:col-span-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm transition-all duration-300">
             <div>
               <div class="flex items-center justify-between mb-3">
                 <div class="flex items-center space-x-2">
@@ -1269,9 +1371,14 @@
       }
     };
 
+    let selectedTruck = 'B 9388 TXW';
+    let isAutoFollow = true;
+    let isMapExpanded = false;
+
     function selectVehicle(plate) {
       const data = fleetData[plate];
       if (!data) return;
+      selectedTruck = plate;
 
       document.getElementById('vehicle-select').value = plate;
       document.getElementById('selected-plate').innerText = data.plate;
@@ -1288,52 +1395,94 @@
       document.getElementById('sensor-door').innerText = data.doorStatus;
       document.getElementById('sensor-power').innerText = data.powerSupply;
 
+      // Update On-Map HUD Bar
+      const hudPlate = document.getElementById('hud-plate');
+      const hudDriver = document.getElementById('hud-driver');
+      const hudLocation = document.getElementById('hud-location');
+      const hudSpeed = document.getElementById('hud-speed');
+      const hudTemp = document.getElementById('hud-temp');
+      const hudCoords = document.getElementById('hud-coords');
+
+      if (hudPlate) {
+        if (isAlarmSimulated && plate === 'B 9388 TXW') {
+          hudPlate.innerHTML = `<span class="text-rose-400 font-black animate-pulse">🚨 ${plate} (ALARM)</span>`;
+        } else {
+          hudPlate.innerHTML = `<span class="text-emerald-400 font-black">${plate}</span>`;
+        }
+      }
+      if (hudDriver) hudDriver.innerText = data.driver;
+      if (hudLocation) hudLocation.innerText = isAlarmSimulated && plate === 'B 9388 TXW' ? 'Tol KM 42 (Bahu Jalan)' : data.locationName;
+      if (hudSpeed) hudSpeed.innerHTML = isAlarmSimulated && plate === 'B 9388 TXW' ? '<span class="text-rose-400 font-bold">0 km/h</span>' : `${data.speed} km/h`;
+      if (hudTemp) hudTemp.innerHTML = isAlarmSimulated && plate === 'B 9388 TXW' ? '<span class="text-rose-400 font-bold">-14.8°C</span>' : `${data.tempActual}°C`;
+      if (hudCoords && data.lat && data.lng) hudCoords.innerText = `${data.lat.toFixed(4)}, ${data.lng.toFixed(4)}`;
+
       if (liveTempChart) {
         liveTempChart.data.datasets[0].data = data.tempHistory;
         liveTempChart.update();
       }
 
       if (leafletMap && data.lat && data.lng) {
-        leafletMap.panTo([data.lat, data.lng], { animate: true });
+        leafletMap.flyTo([data.lat, data.lng], 12, { duration: 0.8 });
       }
     }
 
     let truckMarkers = {};
 
-    // Helper: Create Normal Live Marker Icon
-    function getNormalTruckIcon(plate) {
+    // Helper: Create High-Visibility Live Marker Icon with Speedometer Pill
+    function getNormalTruckIcon(plate, speed = 65) {
+      const plateClean = plate.replace(/\s+/g, '');
       return L.divIcon({
         html: `
-          <div class="relative flex items-center justify-center w-8 h-8">
-            <div class="absolute w-8 h-8 rounded-full bg-blue-500/30 dark:bg-blue-400/20 map-radar-pulse"></div>
-            <div class="relative w-6 h-6 bg-blue-600 dark:bg-blue-500 text-white rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900 shadow-md text-[10px] transform hover:scale-110 transition-transform">
-              🚚
+          <div class="relative flex flex-col items-center justify-center pointer-events-auto" style="width: 140px;">
+            <!-- Vehicle Plate & Live Speed Floating Pill -->
+            <div class="bg-slate-900/95 text-white border border-blue-400 rounded-full px-2.5 py-0.5 shadow-xl flex items-center gap-1.5 text-[10px] font-black tracking-wide mb-1 whitespace-nowrap">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>${plate}</span>
+              <span class="text-slate-400">|</span>
+              <span id="marker-speed-${plateClean}" class="text-emerald-400 font-mono">${speed} km/h</span>
+            </div>
+            <!-- Truck Center Radar Beacon -->
+            <div class="relative flex items-center justify-center w-10 h-10">
+              <div class="absolute w-10 h-10 rounded-full bg-blue-500/40 map-radar-pulse"></div>
+              <div class="absolute w-6 h-6 rounded-full bg-blue-400/30 map-radar-pulse" style="animation-delay: 0.7s;"></div>
+              <div class="relative w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center border-2 border-white shadow-2xl text-sm transform hover:scale-110 transition-transform">
+                🚚
+              </div>
             </div>
           </div>
         `,
-        className: 'custom-live-marker',
-        iconSize: [32, 32],
-        iconAnchor: [16, 16]
+        className: 'custom-live-truck-marker',
+        iconSize: [140, 56],
+        iconAnchor: [70, 48]
       });
     }
 
-    // Helper: Create Blinking Alert Marker Icon
-    function getAlarmTruckIcon(plate) {
+    // Helper: Create Blinking Alert Marker Icon with Emergency Floating Pill
+    function getAlarmTruckIcon(plate, temp = '-14.8°C') {
+      const plateClean = plate.replace(/\s+/g, '');
       return L.divIcon({
         html: `
-          <div class="relative flex items-center justify-center w-10 h-10">
-            <!-- Pulsing Emergency Rings -->
-            <div class="absolute w-10 h-10 rounded-full bg-rose-500/40 map-radar-pulse"></div>
-            <div class="absolute w-7 h-7 rounded-full bg-amber-500/50 map-radar-pulse" style="animation-delay: 0.4s;"></div>
+          <div class="relative flex flex-col items-center justify-center pointer-events-auto" style="width: 170px;">
+            <!-- Emergency Floating Pill -->
+            <div class="bg-rose-600 text-white border-2 border-white rounded-full px-2.5 py-0.5 shadow-2xl flex items-center gap-1.5 text-[10px] font-black tracking-wider mb-1 animate-bounce whitespace-nowrap">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-300 animate-ping"></span>
+              <span>🚨 ${plate}</span>
+              <span class="text-rose-200">|</span>
+              <span class="text-amber-200 font-mono">CRITICAL</span>
+            </div>
             <!-- Blinking Core Beacon -->
-            <div class="relative w-7 h-7 map-alert-beacon text-white rounded-full flex items-center justify-center border-2 border-white shadow-xl text-xs font-bold">
-              🚨
+            <div class="relative flex items-center justify-center w-12 h-12">
+              <div class="absolute w-12 h-12 rounded-full bg-rose-500/50 map-radar-pulse"></div>
+              <div class="absolute w-8 h-8 rounded-full bg-amber-500/60 map-radar-pulse" style="animation-delay: 0.3s;"></div>
+              <div class="relative w-9 h-9 map-alert-beacon text-white rounded-full flex items-center justify-center border-2 border-white shadow-2xl text-base font-bold">
+                🚨
+              </div>
             </div>
           </div>
         `,
-        className: 'custom-alert-marker',
-        iconSize: [40, 40],
-        iconAnchor: [20, 20]
+        className: 'custom-alert-truck-marker',
+        iconSize: [170, 60],
+        iconAnchor: [85, 52]
       });
     }
 
@@ -1428,51 +1577,108 @@
             truckMarkers[plate].setLatLng([lat, lng]);
           }
 
-          // If this vehicle is currently selected in dashboard view, update real-time telemetry box
+          // Update live speed badge inside marker
+          const badgeSpeed = document.getElementById('marker-speed-' + plate.replace(/\s+/g, ''));
+          if (badgeSpeed) {
+            badgeSpeed.innerText = `${Math.round(sim.speed)} km/h`;
+          }
+
+          // If this vehicle is currently selected in dashboard view, update real-time telemetry and HUD
           if (selectedTruck === plate && !isAlarmSimulated) {
             const speedEl = document.getElementById('telemetry-speed');
             if (speedEl) {
               speedEl.innerHTML = `${Math.round(sim.speed)} <span class="text-[10px] font-normal text-slate-500">km/h</span>`;
+            }
+            const hudSpeed = document.getElementById('hud-speed');
+            if (hudSpeed) {
+              hudSpeed.innerText = `${Math.round(sim.speed)} km/h`;
+            }
+            const hudCoords = document.getElementById('hud-coords');
+            if (hudCoords) {
+              hudCoords.innerText = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            }
+
+            // Smooth Auto-Follow camera if active
+            if (isAutoFollow && leafletMap) {
+              leafletMap.panTo([lat, lng], { animate: true, duration: 0.35 });
             }
           }
         });
       }, 350); // Update every 350ms for buttery smooth vehicle driving animation
     }
 
-    // Leaflet Map Init
+    // Leaflet Map Init (High Zoom & Crisp Route Overlays)
     function initMaps() {
       const mapContainer = document.getElementById('live-map');
       if (mapContainer && !leafletMap) {
-        leafletMap = L.map('live-map', { zoomControl: false }).setView([-6.38, 107.35], 9);
+        // Closer default view (Zoom 10.5) centered on the active Trans-Jawa corridor
+        leafletMap = L.map('live-map', { zoomControl: false }).setView([-6.40, 107.38], 10.5);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '&copy; OpenStreetMap'
         }).addTo(leafletMap);
 
-        // Draw Polyline Route 1 (Jakarta - Bandung)
+        // Draw Route 1 Glow Underlay + Main Polyline (Jakarta - Bandung)
+        L.polyline(route1Coordinates, {
+          color: '#60A5FA',
+          weight: 7,
+          opacity: 0.35
+        }).addTo(leafletMap);
         L.polyline(route1Coordinates, {
           color: '#2563EB',
+          weight: 4.5,
+          opacity: 0.95
+        }).addTo(leafletMap);
+
+        // Draw Route 2 Glow Underlay + Main Polyline (Jakarta - Cirebon)
+        L.polyline(route2Coordinates, {
+          color: '#2DD4BF',
+          weight: 6,
+          opacity: 0.3
+        }).addTo(leafletMap);
+        L.polyline(route2Coordinates, {
+          color: '#0D9488',
           weight: 3.5,
-          opacity: 0.8,
+          opacity: 0.9,
           dashArray: '4, 6'
         }).addTo(leafletMap);
 
-        // Draw Polyline Route 2 (Jakarta - Cirebon)
-        L.polyline(route2Coordinates, {
-          color: '#0D9488',
-          weight: 2.5,
-          opacity: 0.6,
-          dashArray: '3, 6'
-        }).addTo(leafletMap);
+        // Waypoints / Milestones along the corridors
+        const routeMilestones = [
+          { name: 'DC Hub Jakarta (KM 0)', coords: [-6.2088, 106.8456], color: '#3B82F6' },
+          { name: 'Karawang Barat (KM 35)', coords: [-6.3200, 107.2000], color: '#3B82F6' },
+          { name: 'Titik Pantau KM 42 (Karawang)', coords: [-6.3718, 107.3188], color: '#F59E0B' },
+          { name: 'Rest Area KM 57', coords: [-6.4200, 107.3800], color: '#10B981' },
+          { name: 'Gerbang Cikampek Utama', coords: [-6.4600, 107.4100], color: '#6366F1' },
+          { name: 'Cipali KM 79 (Purwakarta)', coords: [-6.5020, 107.5020], color: '#0D9488' },
+          { name: 'Purwakarta (KM 85)', coords: [-6.5562, 107.4431], color: '#3B82F6' },
+          { name: 'DC Hub Bandung (KM 135)', coords: [-6.9175, 107.6191], color: '#8B5CF6' },
+          { name: 'DC Hub Cirebon (KM 215)', coords: [-6.7320, 108.5523], color: '#0D9488' }
+        ];
+
+        routeMilestones.forEach(m => {
+          L.circleMarker(m.coords, {
+            radius: 5,
+            fillColor: m.color,
+            color: '#ffffff',
+            weight: 2,
+            opacity: 0.95,
+            fillOpacity: 0.9
+          }).bindTooltip(`<b>${m.name}</b>`, {
+            permanent: false,
+            direction: 'top',
+            className: 'milestone-tooltip'
+          }).addTo(leafletMap);
+        });
 
         // Marker 1: B 9388 TXW
         truckMarkers['B 9388 TXW'] = L.marker([-6.3718, 107.3188], { 
-          icon: getNormalTruckIcon('B 9388 TXW') 
+          icon: getNormalTruckIcon('B 9388 TXW', 65) 
         }).addTo(leafletMap);
         truckMarkers['B 9388 TXW'].bindPopup('<b>B 9388 TXW</b><br>Suhu: -18.2°C (Normal)<br>KM 42 Karawang &bull; Dalam Perjalanan');
 
         // Marker 2: B 9587 TXW
         truckMarkers['B 9587 TXW'] = L.marker([-6.5020, 107.5020], { 
-          icon: getNormalTruckIcon('B 9587 TXW') 
+          icon: getNormalTruckIcon('B 9587 TXW', 72) 
         }).addTo(leafletMap);
         truckMarkers['B 9587 TXW'].bindPopup('<b>B 9587 TXW</b><br>Suhu: -17.8°C (Normal)<br>KM 79 Cipali &bull; Dalam Perjalanan');
 
@@ -1481,8 +1687,74 @@
       }
     }
 
+    // Map Controls & Camera Presets
+    function zoomMapIn() {
+      if (leafletMap) leafletMap.zoomIn();
+    }
+
+    function zoomMapOut() {
+      if (leafletMap) leafletMap.zoomOut();
+    }
+
+    function focusTruck(plate) {
+      selectedTruck = plate;
+      selectVehicle(plate);
+      const marker = truckMarkers[plate];
+      if (leafletMap && marker) {
+        leafletMap.flyTo(marker.getLatLng(), 12.5, { duration: 0.8 });
+      }
+    }
+
     function recenterMap() {
-      if (leafletMap) leafletMap.setView([-6.38, 107.35], 9, { animate: true });
+      if (leafletMap) {
+        leafletMap.flyTo([-6.40, 107.38], 10.5, { duration: 0.8 });
+      }
+    }
+
+    function toggleAutoFollow() {
+      isAutoFollow = !isAutoFollow;
+      const followBtn = document.getElementById('btn-auto-follow');
+      const followIcon = document.getElementById('follow-icon');
+      const followText = document.getElementById('follow-text');
+      
+      if (isAutoFollow) {
+        followBtn.className = 'px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 text-[11px] font-bold transition-all flex items-center gap-1';
+        followIcon.className = 'w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400 animate-ping';
+        followText.innerText = 'Ikuti Gerak';
+      } else {
+        followBtn.className = 'px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-800 text-[11px] font-medium transition-all flex items-center gap-1';
+        followIcon.className = 'w-2 h-2 rounded-full bg-slate-400';
+        followText.innerText = 'Ikuti: Off';
+      }
+    }
+
+    function toggleExpandMap() {
+      isMapExpanded = !isMapExpanded;
+      const mapCol = document.getElementById('map-card-container');
+      const detailCol = document.getElementById('detail-card-container');
+      const tempCol = document.getElementById('temp-card-container');
+      const mapDiv = document.getElementById('live-map');
+      const expandBtnText = document.getElementById('expand-map-text');
+      
+      if (isMapExpanded) {
+        mapCol.className = 'lg:col-span-12 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-lg transition-all duration-300';
+        detailCol.className = 'lg:col-span-6 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm transition-all duration-300';
+        tempCol.className = 'lg:col-span-6 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm transition-all duration-300';
+        mapDiv.className = 'w-full h-[540px] transition-all duration-300';
+        if (expandBtnText) expandBtnText.innerText = 'Perkecil Peta';
+      } else {
+        mapCol.className = 'lg:col-span-6 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm transition-all duration-300';
+        detailCol.className = 'lg:col-span-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm transition-all duration-300';
+        tempCol.className = 'lg:col-span-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm transition-all duration-300';
+        mapDiv.className = 'w-full h-96 lg:h-[450px] transition-all duration-300';
+        if (expandBtnText) expandBtnText.innerText = 'Lebarkan Peta';
+      }
+      
+      if (leafletMap) {
+        setTimeout(() => {
+          leafletMap.invalidateSize();
+        }, 320);
+      }
     }
 
     // Chart.js Init
@@ -1538,67 +1810,49 @@
       }
     }
 
-    function updateChartColors() {
-      if (!liveTempChart) return;
-      liveTempChart.update();
-    }
-
     // Audio Alert Synthesizer (Native Web Audio API)
     function playAlarmSound() {
       try {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const playTone = (freq, delay, dur) => {
-          setTimeout(() => {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(freq / 2, audioCtx.currentTime + dur);
-            gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + dur);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + dur);
-          }, delay);
-        };
-        playTone(880, 0, 0.18);
-        playTone(880, 180, 0.18);
-        playTone(980, 360, 0.25);
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.3);
+
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.3);
       } catch (e) {
-        console.log("Audio alert initialized without user gesture block", e);
+        console.log('Audio autoplay prevented:', e);
       }
     }
 
-    // Live Tickers & Timer Variables
-    let doorSecondsElapsed = 312; // 5 min 12 sec
-    let doorTimerInterval = null;
-    let tempAnimationInterval = null;
-
-    function formatDoorTime(totalSecs) {
-      const mins = Math.floor(totalSecs / 60);
-      const secs = totalSecs % 60;
-      return `${String(mins).padStart(2, '0')}m:${String(secs).padStart(2, '0')}s`;
-    }
-
-    // Toast Control
+    // Toast Notification Trigger
     function showEmergencyToast() {
       const toast = document.getElementById('emergency-toast');
       if (toast) {
-        toast.classList.remove('-translate-y-40', 'opacity-0', 'pointer-events-none');
+        toast.classList.remove('translate-y-24', 'opacity-0', 'pointer-events-none');
         toast.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
+        playAlarmSound();
       }
     }
 
     function closeEmergencyToast() {
       const toast = document.getElementById('emergency-toast');
       if (toast) {
+        toast.classList.add('translate-y-24', 'opacity-0', 'pointer-events-none');
         toast.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
-        toast.classList.add('-translate-y-40', 'opacity-0', 'pointer-events-none');
       }
     }
 
-    // Dispatcher Action Modal Control
+    // Dispatcher SOP Modal
     function openDispatcherModal() {
       const modal = document.getElementById('dispatcher-action-modal');
       if (modal) modal.classList.remove('hidden');
@@ -1609,22 +1863,47 @@
       if (modal) modal.classList.add('hidden');
     }
 
-    // Alarm Simulator
+    function toggleSOPCheck(index) {
+      const item = document.getElementById('sop-item-' + index);
+      const btn = document.getElementById('sop-btn-' + index);
+      const check = document.getElementById('sop-check-' + index);
+
+      if (btn.classList.contains('bg-slate-200') || btn.classList.contains('dark:bg-slate-700')) {
+        btn.className = 'w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-xs shadow-sm transition-all';
+        check.classList.remove('hidden');
+        item.classList.add('opacity-60', 'line-through');
+      } else {
+        btn.className = 'w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center font-bold text-xs transition-all';
+        check.classList.add('hidden');
+        item.classList.remove('opacity-60', 'line-through');
+      }
+    }
+
+    // Interactive Exception Simulation Trigger
+    let doorTimerInterval = null;
+    let doorSecondsElapsed = 312; // 05m:12s
+    let tempAnimationInterval = null;
+
+    function formatDoorTime(secs) {
+      const m = Math.floor(secs / 60);
+      const s = secs % 60;
+      return `${String(m).padStart(2, '0')}m:${String(s).padStart(2, '0')}s`;
+    }
+
     function toggleAlarmSimulation() {
       isAlarmSimulated = !isAlarmSimulated;
       const statNormal = document.getElementById('stat-suhu-normal');
       const statWarning = document.getElementById('stat-suhu-warning');
       const statPerjalanan = document.getElementById('stat-dalam-perjalanan');
-      const alarmBox = document.getElementById('alarm-box-content');
       const btnText = document.getElementById('btn-sim-text');
+      const alarmBox = document.getElementById('alarm-box-content');
 
-      // Clear existing intervals
-      if (doorTimerInterval) clearInterval(doorTimerInterval);
-      if (tempAnimationInterval) clearInterval(tempAnimationInterval);
+      clearInterval(doorTimerInterval);
+      clearInterval(tempAnimationInterval);
 
       if (isAlarmSimulated) {
-        // Trigger Audio Warning
-        playAlarmSound();
+        // Auto-select B 9388 TXW
+        selectVehicle('B 9388 TXW');
 
         // Update Top Status Cards to realistic ratios
         statNormal.innerText = '1';
@@ -1638,7 +1917,7 @@
         truckSimulation['B 9388 TXW'].isStopped = true;
 
         if (truckMarkers['B 9388 TXW']) {
-          truckMarkers['B 9388 TXW'].setIcon(getAlarmTruckIcon('B 9388 TXW'));
+          truckMarkers['B 9388 TXW'].setIcon(getAlarmTruckIcon('B 9388 TXW', '-14.8°C'));
           truckMarkers['B 9388 TXW'].bindPopup(`
             <div class="p-1 text-xs">
               <div class="font-bold text-rose-600 flex items-center gap-1 mb-1">
@@ -1653,7 +1932,7 @@
           `).openPopup();
 
           if (leafletMap) {
-            leafletMap.flyTo(truckMarkers['B 9388 TXW'].getLatLng(), 10, { duration: 0.8 });
+            leafletMap.flyTo(truckMarkers['B 9388 TXW'].getLatLng(), 13, { duration: 0.8 });
           }
         }
 
@@ -1725,6 +2004,16 @@
         document.getElementById('chart-temp-actual').className = 'text-xl font-bold text-rose-600 dark:text-rose-400 mt-0.5';
         document.getElementById('telemetry-speed').innerHTML = `0 <span class="text-[10px] font-normal text-rose-500 font-bold">(Berhenti)</span>`;
 
+        // Update Map HUD
+        const hudPlate = document.getElementById('hud-plate');
+        const hudLocation = document.getElementById('hud-location');
+        const hudSpeed = document.getElementById('hud-speed');
+        const hudTemp = document.getElementById('hud-temp');
+        if (hudPlate) hudPlate.innerHTML = `<span class="text-rose-400 font-black animate-pulse">🚨 B 9388 TXW (CRITICAL)</span>`;
+        if (hudLocation) hudLocation.innerText = 'Tol KM 42 (Bahu Jalan)';
+        if (hudSpeed) hudSpeed.innerHTML = `<span class="text-rose-400 font-bold">0 km/h (Berhenti)</span>`;
+        if (hudTemp) hudTemp.innerHTML = `<span class="text-rose-400 font-bold">-14.8°C</span>`;
+
         // Update Table Row 1
         const row1 = document.getElementById('table-row-B9388');
         if (row1) row1.className = 'bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 cursor-pointer transition-colors';
@@ -1764,7 +2053,7 @@
 
         // Reset Marker on Map
         if (truckMarkers['B 9388 TXW']) {
-          truckMarkers['B 9388 TXW'].setIcon(getNormalTruckIcon('B 9388 TXW'));
+          truckMarkers['B 9388 TXW'].setIcon(getNormalTruckIcon('B 9388 TXW', 65));
           truckMarkers['B 9388 TXW'].bindPopup('<b>B 9388 TXW</b><br>Suhu: -18.2°C (Normal)<br>KM 42 Karawang &bull; Dalam Perjalanan');
           truckMarkers['B 9388 TXW'].closePopup();
         }
