@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="100%" height="100%">
+  <!-- Orange Crown Motif centered above the A -->
+  <path d="M 68 38 L 82 8 L 100 22 L 118 8 L 132 38 L 121 38 L 112 20 L 100 28 L 88 20 L 79 38 Z" 
+        fill="#FF5722" />
+  
+  <!-- "RACE" in Bold Italic Navy -->
+  <text x="100" y="80" 
+        text-anchor="middle" 
+        font-family="'Inter', 'Arial Black', sans-serif" 
+        font-weight="900" 
+        font-style="italic" 
+        font-size="44" 
+        letter-spacing="2" 
+        fill="#183661">RACE</text>
+  
+  <!-- "Raja Cepat" in Italic Orange -->
+  <text x="100" y="106" 
+        text-anchor="middle" 
+        font-family="'Inter', 'Arial', sans-serif" 
+        font-weight="700" 
+        font-style="italic" 
+        font-size="18" 
+        letter-spacing="0.5" 
+        fill="#FF5722">Raja Cepat</text>
+</svg>

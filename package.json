@@ -1,0 +1,10 @@
+{
+  "name": "race-cold-chain-monitoring",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PT. RACE Raja Cepat Nusantara - Cold Chain & Fleet Reefer Monitoring Dashboard",
+  "scripts": {
+    "dev": "npx serve .",
+    "start": "npx serve ."
+  }
+}

@@ -1,0 +1,1866 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full light" id="html-root">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RACE - Dashboard Monitoring Kendaraan Frozen & BBM</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              orange: '#EA580C',
+              'orange-light': '#FFF7ED',
+              blue: '#1E40AF',
+              'blue-light': '#EFF6FF'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Leaflet Map CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    
+    /* Smooth theme transitions */
+    *, *::before, *::after {
+      transition-property: background-color, border-color, color, fill, stroke;
+      transition-duration: 150ms;
+      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Live GPS Radar Pulse Animation */
+    @keyframes live-pulse {
+      0% { transform: scale(0.9); opacity: 0.8; }
+      50% { transform: scale(1.7); opacity: 0.25; }
+      100% { transform: scale(2.5); opacity: 0; }
+    }
+    .map-radar-pulse {
+      animation: live-pulse 2.2s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+
+    /* Emergency Alert Blinking Beacon */
+    @keyframes alert-blink {
+      0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.8), 0 0 15px rgba(245, 158, 11, 0.9);
+        background-color: #EF4444;
+      }
+      50% {
+        transform: scale(1.22);
+        box-shadow: 0 0 0 14px rgba(239, 68, 68, 0), 0 0 25px rgba(239, 68, 68, 1);
+        background-color: #F59E0B;
+      }
+    }
+    .map-alert-beacon {
+      animation: alert-blink 0.75s ease-in-out infinite !important;
+    }
+
+    /* Dark Mode Map Adjustment */
+    .dark .leaflet-tile {
+      filter: brightness(0.65) invert(1) contrast(2.2) hue-rotate(200deg) saturate(0.25);
+    }
+    .dark .leaflet-container {
+      background: #0f172a !important;
+    }
+  </style>
+</head>
+<body class="h-full flex overflow-hidden bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100">
+
+  <!-- ==================== SIDEBAR ==================== -->
+  <aside class="w-64 bg-white dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between flex-shrink-0 z-30">
+    <div>
+      <!-- Brand Logo (Official RACE Raja Cepat) -->
+      <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center space-x-3">
+        <div class="w-14 h-11 flex-shrink-0 flex items-center justify-center">
+          <svg viewBox="0 0 200 120" class="w-full h-full object-contain" xmlns="http://www.w3.org/2000/svg">
+            <!-- Orange Crown Motif -->
+            <path d="M 68 38 L 82 8 L 100 22 L 118 8 L 132 38 L 121 38 L 112 20 L 100 28 L 88 20 L 79 38 Z" fill="#FF5722" />
+            <!-- "RACE" in Bold Italic -->
+            <text x="100" y="80" text-anchor="middle" font-family="'Inter', 'Arial Black', sans-serif" font-weight="900" font-style="italic" font-size="44" letter-spacing="2" class="fill-[#183661] dark:fill-white">RACE</text>
+            <!-- "Raja Cepat" in Italic Orange -->
+            <text x="100" y="106" text-anchor="middle" font-family="'Inter', 'Arial', sans-serif" font-weight="700" font-style="italic" font-size="18" letter-spacing="0.5" fill="#FF5722">Raja Cepat</text>
+          </svg>
+        </div>
+        <div class="border-l border-slate-200 dark:border-slate-800 pl-3">
+          <div class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white leading-tight">PT. RAJA CEPAT</div>
+          <div class="text-[10px] text-orange-600 dark:text-orange-400 font-semibold tracking-wider">NUSANTARA</div>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs (Simple & Focused) -->
+      <nav class="p-3 space-y-1 text-xs font-medium">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 pt-2 pb-1">Menu Utama</div>
+        
+        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-white bg-blue-700 dark:bg-blue-600 font-semibold shadow-sm transition-all text-left">
+          <i data-lucide="layout-dashboard" class="w-4 h-4 flex-shrink-0"></i>
+          <span class="whitespace-nowrap">Dashboard Frozen</span>
+        </button>
+
+        <button onclick="switchTab('bbm')" id="nav-bbm" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-left">
+          <i data-lucide="fuel" class="w-4 h-4 flex-shrink-0"></i>
+          <span class="whitespace-nowrap">Monitoring BBM</span>
+        </button>
+
+        <button onclick="switchTab('kpi')" id="nav-kpi" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-left">
+          <i data-lucide="target" class="w-4 h-4 flex-shrink-0"></i>
+          <span class="whitespace-nowrap">KPI & Action Plan</span>
+        </button>
+
+        <button onclick="switchTab('perangkat')" id="nav-perangkat" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-left">
+          <i data-lucide="cpu" class="w-4 h-4 flex-shrink-0"></i>
+          <span class="whitespace-nowrap">Perangkat Monitoring (8)</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- Sidebar Footer -->
+    <div class="p-3 border-t border-slate-200 dark:border-slate-800">
+      <!-- Dispatcher User -->
+      <div class="flex items-center space-x-2.5 px-2 py-1.5">
+        <div class="w-7 h-7 rounded-lg bg-orange-100 dark:bg-orange-950/60 text-orange-700 dark:text-orange-400 flex items-center justify-center font-bold text-xs border border-orange-200 dark:border-orange-800/40">
+          OP
+        </div>
+        <div class="overflow-hidden">
+          <div class="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">Dispatcher Utama</div>
+          <div class="text-[10px] text-slate-400 truncate">Central Fleet Hub</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ==================== MAIN CONTENT AREA ==================== -->
+  <main class="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-slate-50 dark:bg-slate-900">
+    
+    <!-- Top Header Bar -->
+    <header class="h-14 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 px-6 flex items-center justify-between z-20 flex-shrink-0">
+      <div class="flex items-center space-x-3">
+        <h1 id="page-title" class="text-sm md:text-base font-bold text-slate-900 dark:text-white uppercase tracking-wide">Monitoring Kendaraan Frozen</h1>
+        <span class="text-xs text-slate-400 hidden sm:inline border-l border-slate-200 dark:border-slate-800 pl-3">Real Time Monitoring & Control</span>
+      </div>
+
+      <div class="flex items-center space-x-3">
+        <!-- Live Clock -->
+        <div class="text-right hidden sm:block">
+          <div id="live-date" class="text-[10px] text-slate-500 dark:text-slate-400">Selasa, 20 Mei 2026</div>
+          <div id="live-time" class="text-xs font-bold font-mono text-slate-800 dark:text-slate-200">10:24:38 WIB</div>
+        </div>
+
+        <!-- Light / Dark Mode Toggle Button -->
+        <button onclick="toggleTheme()" class="p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:text-orange-600 hover:border-orange-500 transition-colors" title="Ganti Mode Light / Dark">
+          <i data-lucide="sun" id="icon-theme-sun" class="w-4 h-4 hidden dark:block text-amber-400"></i>
+          <i data-lucide="moon" id="icon-theme-moon" class="w-4 h-4 block dark:hidden text-slate-600"></i>
+        </button>
+
+        <!-- Alarm Simulation Toggle -->
+        <button onclick="toggleAlarmSimulation()" id="btn-alarm-sim" class="px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center space-x-1.5 transition-colors bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-orange-500">
+          <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-500"></i>
+          <span id="btn-sim-text">Uji Alarm</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Scrollable Content View -->
+    <div class="flex-1 overflow-y-auto p-4 md:p-6 space-y-5">
+
+      <!-- ======================================================== -->
+      <!-- TAB 1: DASHBOARD MONITORING FROZEN (SLIDE 1)             -->
+      <!-- ======================================================== -->
+      <section id="tab-dashboard" class="space-y-5">
+        
+        <!-- 6 TOP STATUS COUNTER CARDS -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <!-- Total Armada -->
+          <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 shadow-sm">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Total Armada Frozen</div>
+            <div class="flex items-baseline space-x-1">
+              <span class="text-2xl font-bold text-slate-900 dark:text-white" id="stat-total-armada">2</span>
+              <span class="text-xs text-slate-500">Unit</span>
+            </div>
+            <div class="text-[10px] text-slate-400 mt-0.5">CDE & CDD Reefer</div>
+          </div>
+
+          <!-- Suhu Normal -->
+          <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 shadow-sm">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-1">Suhu Normal</div>
+            <div class="flex items-baseline space-x-1">
+              <span class="text-2xl font-bold text-emerald-600 dark:text-emerald-400" id="stat-suhu-normal">2</span>
+              <span class="text-xs text-emerald-600/80 dark:text-emerald-400/80">Unit (100%)</span>
+            </div>
+            <div class="text-[10px] text-slate-400 mt-0.5">&lt; -18.0°C Safe Zone</div>
+          </div>
+
+          <!-- Suhu Warning -->
+          <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 shadow-sm">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-1">Suhu Warning</div>
+            <div class="flex items-baseline space-x-1">
+              <span class="text-2xl font-bold text-amber-600 dark:text-amber-400" id="stat-suhu-warning">0</span>
+              <span class="text-xs text-slate-500">Unit (0%)</span>
+            </div>
+            <div class="text-[10px] text-slate-400 mt-0.5">-15°C s/d -17.9°C</div>
+          </div>
+
+          <!-- Suhu Critical -->
+          <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 shadow-sm">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 mb-1">Suhu Critical</div>
+            <div class="flex items-baseline space-x-1">
+              <span class="text-2xl font-bold text-rose-600 dark:text-rose-400" id="stat-suhu-critical">0</span>
+              <span class="text-xs text-slate-500">Unit (0%)</span>
+            </div>
+            <div class="text-[10px] text-slate-400 mt-0.5">&gt; -15.0°C Alert</div>
+          </div>
+
+          <!-- Reefer Off -->
+          <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 shadow-sm">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Reefer Off / Error</div>
+            <div class="flex items-baseline space-x-1">
+              <span class="text-2xl font-bold text-slate-700 dark:text-slate-300" id="stat-reefer-off">0</span>
+              <span class="text-xs text-slate-500">Unit (0%)</span>
+            </div>
+            <div class="text-[10px] text-slate-400 mt-0.5">Mesin Mati / Trip</div>
+          </div>
+
+          <!-- Dalam Perjalanan -->
+          <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 shadow-sm">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-1">Dalam Perjalanan</div>
+            <div class="flex items-baseline space-x-1">
+              <span class="text-2xl font-bold text-blue-600 dark:text-blue-400" id="stat-dalam-perjalanan">2</span>
+              <span class="text-xs text-slate-500">Unit</span>
+            </div>
+            <div class="text-[10px] text-slate-400 mt-0.5">Active Delivery</div>
+          </div>
+        </div>
+
+        <!-- 8 PARAMETER STRIP (CLEAN & SIMPLE) -->
+        <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-3 border-b border-slate-100 dark:border-slate-800 pb-2">
+            <div class="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-orange-600"></span>
+              8 Parameter Monitoring Pengiriman Terintegrasi
+            </div>
+            <div class="text-[11px] text-slate-500 dark:text-slate-400">Standar Cold Chain PT. Raja Cepat Nusantara</div>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 text-center text-xs">
+            <div class="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+              <div class="font-bold text-slate-800 dark:text-slate-200">1. Suhu Frozen</div>
+              <div class="text-[10px] text-slate-500 dark:text-slate-400">&le; -18.0°C</div>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+              <div class="font-bold text-slate-800 dark:text-slate-200">2. Level BBM</div>
+              <div class="text-[10px] text-slate-500 dark:text-slate-400">Full-to-Full</div>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+              <div class="font-bold text-slate-800 dark:text-slate-200">3. Lokasi GPS</div>
+              <div class="text-[10px] text-slate-500 dark:text-slate-400">Live Tracker</div>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+              <div class="font-bold text-slate-800 dark:text-slate-200">4. Door Sensor</div>
+              <div class="text-[10px] text-slate-500 dark:text-slate-400">Buka / Tutup</div>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+              <div class="font-bold text-slate-800 dark:text-slate-200">5. Tegangan Aki</div>
+              <div class="text-[10px] text-slate-500 dark:text-slate-400">24V Power</div>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+              <div class="font-bold text-slate-800 dark:text-slate-200">6. Kilometer</div>
+              <div class="text-[10px] text-slate-500 dark:text-slate-400">Odometer Fisik</div>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+              <div class="font-bold text-slate-800 dark:text-slate-200">7. Alarm Anomali</div>
+              <div class="text-[10px] text-slate-500 dark:text-slate-400">Auto Exception</div>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+              <div class="font-bold text-slate-800 dark:text-slate-200">8. Rekaman Histori</div>
+              <div class="text-[10px] text-slate-500 dark:text-slate-400">Audit Trail</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MAIN 3-COLUMN SECTION -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+          <!-- LEFT: LIVE MAP (5 cols) -->
+          <div class="lg:col-span-5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center space-x-2">
+                  <i data-lucide="map" class="w-4 h-4 text-blue-600 dark:text-blue-400"></i>
+                  <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">Peta Pergerakan Kendaraan</h3>
+                </div>
+                <div class="flex items-center space-x-2 text-[10px]">
+                  <span class="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Normal</span>
+                  <span class="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Warning</span>
+                </div>
+              </div>
+
+              <!-- Leaflet Map Container -->
+              <div id="live-map" class="w-full h-72 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800"></div>
+            </div>
+
+            <div class="mt-3 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800">
+              <span>Rute: <strong class="text-slate-800 dark:text-slate-200">Jakarta &rarr; Cikampek &rarr; Bandung</strong></span>
+              <button onclick="recenterMap()" class="text-blue-600 dark:text-blue-400 hover:underline text-[11px] font-medium">Reset View</button>
+            </div>
+          </div>
+
+          <!-- MIDDLE: DETAIL KENDARAAN (4 cols) -->
+          <div class="lg:col-span-4 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm">
+            <div>
+              <!-- Header & Selector -->
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center space-x-2">
+                  <i data-lucide="info" class="w-4 h-4 text-orange-600 dark:text-orange-400"></i>
+                  <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">Detail Kendaraan</h3>
+                </div>
+                <!-- Vehicle Selector -->
+                <select id="vehicle-select" onchange="selectVehicle(this.value)" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 text-xs rounded-lg px-2.5 py-1 font-semibold focus:outline-none">
+                  <option value="B 9388 TXW">B 9388 TXW (CDE)</option>
+                  <option value="B 9587 TXW">B 9587 TXW (CDD)</option>
+                </select>
+              </div>
+
+              <!-- Plate & Specification Card -->
+              <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3 mb-3">
+                <div class="flex items-center justify-between mb-2">
+                  <div>
+                    <span id="selected-plate" class="text-base font-bold text-slate-900 dark:text-white">B 9388 TXW</span>
+                    <span id="selected-type" class="ml-2 text-xs text-slate-500 dark:text-slate-400">CDE Reefer</span>
+                  </div>
+                  <span id="selected-status-badge" class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40">
+                    NORMAL
+                  </span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-x-2 gap-y-1 text-xs text-slate-600 dark:text-slate-300">
+                  <div>Driver: <span id="selected-driver" class="font-medium text-slate-900 dark:text-white">Mohamad Nursyam</span></div>
+                  <div>Rute: <span id="selected-route" class="font-medium text-slate-900 dark:text-white">Jakarta - Bandung</span></div>
+                  <div>Status: <span id="selected-shipment-status" class="font-medium text-blue-600 dark:text-blue-400">Dalam Perjalanan</span></div>
+                  <div>Muatan: <span id="selected-cargo" class="font-medium text-slate-900 dark:text-white">Frozen Food (7.800 Kg)</span></div>
+                  <div>ETD: <span class="text-slate-500">20 Mei 08:00</span></div>
+                  <div>ETA: <span class="text-slate-500">20 Mei 13:30</span></div>
+                </div>
+              </div>
+
+              <!-- Telemetry Metric Boxes -->
+              <div class="grid grid-cols-3 gap-2 mb-3">
+                <div class="bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 text-center">
+                  <div class="text-[10px] text-slate-500 dark:text-slate-400 uppercase">Lokasi</div>
+                  <div id="telemetry-location" class="text-xs font-bold text-slate-900 dark:text-white truncate mt-0.5">Tol KM 42</div>
+                  <div class="text-[9px] text-slate-400">Karawang</div>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 text-center">
+                  <div class="text-[10px] text-slate-500 dark:text-slate-400 uppercase">Kecepatan</div>
+                  <div id="telemetry-speed" class="text-sm font-bold text-slate-900 dark:text-white mt-0.5">65 <span class="text-[10px] font-normal text-slate-500">km/h</span></div>
+                  <div class="text-[9px] text-emerald-600 dark:text-emerald-400 font-medium">Normal</div>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 text-center">
+                  <div class="text-[10px] text-slate-500 dark:text-slate-400 uppercase">Kondisi BBM</div>
+                  <div id="telemetry-fuel" class="text-sm font-bold text-slate-900 dark:text-white mt-0.5">68%</div>
+                  <div class="text-[9px] text-slate-500 dark:text-slate-400">~68 Liter</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Hardware State Pills -->
+            <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+              <div class="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+                <div class="text-[9px] text-slate-400">REEFER</div>
+                <div id="sensor-reefer" class="font-bold text-emerald-600 dark:text-emerald-400">ON</div>
+              </div>
+              <div class="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+                <div class="text-[9px] text-slate-400">DOOR SENSOR</div>
+                <div id="sensor-door" class="font-bold text-emerald-600 dark:text-emerald-400">Tertutup</div>
+              </div>
+              <div class="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+                <div class="text-[9px] text-slate-400">POWER / AKI</div>
+                <div id="sensor-power" class="font-bold text-slate-700 dark:text-slate-300">24.2 V</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT: TEMPERATURE & REEFER (3 cols) -->
+          <div class="lg:col-span-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center space-x-2">
+                  <i data-lucide="thermometer-snowflake" class="w-4 h-4 text-blue-600 dark:text-blue-400"></i>
+                  <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">Temperature & Reefer</h3>
+                </div>
+                <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">Live Sync</span>
+              </div>
+
+              <!-- Temperature Big Numbers -->
+              <div class="grid grid-cols-2 gap-2 mb-3">
+                <div class="bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 text-center">
+                  <div class="text-[10px] text-slate-500 dark:text-slate-400 uppercase">Suhu Aktual</div>
+                  <div id="chart-temp-actual" class="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">-18.2 <span class="text-xs font-normal">°C</span></div>
+                  <div id="sla-status-badge" class="text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold">SLA Terpenuhi</div>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 text-center">
+                  <div class="text-[10px] text-slate-500 dark:text-slate-400 uppercase">Set Point</div>
+                  <div class="text-xl font-bold text-slate-700 dark:text-slate-300 mt-0.5">-18.0 <span class="text-xs font-normal">°C</span></div>
+                  <div class="text-[9px] text-slate-400">Target Suhu</div>
+                </div>
+              </div>
+
+              <!-- Temperature Line Chart -->
+              <div class="h-36 w-full relative">
+                <canvas id="tempChart"></canvas>
+              </div>
+            </div>
+
+            <div class="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+              <span>Hour Meter: <strong class="text-slate-700 dark:text-slate-300">1.482 Jam</strong></span>
+              <span class="text-emerald-600 dark:text-emerald-400 font-medium">Defrost: Standby</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- BOTTOM PANELS: ALARM, TABEL ARMADA, PERFORMANCE -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+          <!-- Alarm Aktif (3 cols) -->
+          <div class="lg:col-span-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center space-x-2">
+                  <i data-lucide="bell" class="w-4 h-4 text-slate-600 dark:text-slate-400"></i>
+                  <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">Alarm Aktif</h3>
+                </div>
+              </div>
+
+              <div id="alarm-box-content" class="space-y-2">
+                <div class="p-6 text-center flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                  <div class="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2">
+                    <i data-lucide="check" class="w-5 h-5"></i>
+                  </div>
+                  <div class="text-xs font-bold text-slate-800 dark:text-slate-200">Tidak Ada Alarm</div>
+                  <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Semua parameter berjalan normal</div>
+                </div>
+              </div>
+            </div>
+
+            <button onclick="toggleAlarmSimulation()" class="mt-3 w-full py-2 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors">
+              Simulasi Exception Pintu / Suhu
+            </button>
+          </div>
+
+          <!-- Daftar Kendaraan (6 cols) -->
+          <div class="lg:col-span-6 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center space-x-2">
+                  <i data-lucide="list" class="w-4 h-4 text-blue-600 dark:text-blue-400"></i>
+                  <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">Daftar Kendaraan Aktif</h3>
+                </div>
+                <span class="text-[11px] text-slate-400">2 Unit Terpantau</span>
+              </div>
+
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                  <thead class="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+                    <tr>
+                      <th class="py-2.5 px-3">No. Polisi</th>
+                      <th class="py-2.5 px-2">Tipe</th>
+                      <th class="py-2.5 px-2">Driver</th>
+                      <th class="py-2.5 px-2">Rute</th>
+                      <th class="py-2.5 px-2 text-center">Suhu</th>
+                      <th class="py-2.5 px-2 text-center">Reefer</th>
+                      <th class="py-2.5 px-2 text-center">Status</th>
+                      <th class="py-2.5 px-2">Lokasi</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                    <tr id="table-row-B9388" onclick="selectVehicle('B 9388 TXW')" class="hover:bg-slate-50 dark:hover:bg-slate-900 cursor-pointer transition-colors">
+                      <td class="py-2.5 px-3 font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <span id="table-dot-B9388" class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        B 9388 TXW
+                      </td>
+                      <td class="py-2.5 px-2 text-[11px] text-slate-500">CDE</td>
+                      <td class="py-2.5 px-2 font-medium">Mohamad Nursyam</td>
+                      <td class="py-2.5 px-2 text-[11px]">Jkt - Bdg</td>
+                      <td id="table-suhu-B9388" class="py-2.5 px-2 text-center font-bold text-emerald-600 dark:text-emerald-400 font-mono">-18.2°C</td>
+                      <td class="py-2.5 px-2 text-center"><span id="table-reefer-B9388" class="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400 rounded text-[10px] font-bold">ON</span></td>
+                      <td class="py-2.5 px-2 text-center"><span id="table-status-B9388" class="px-1.5 py-0.5 bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-400 rounded text-[10px]">Jalan</span></td>
+                      <td id="table-lokasi-B9388" class="py-2.5 px-2 text-[11px] text-slate-500">KM 42</td>
+                    </tr>
+                    <tr onclick="selectVehicle('B 9587 TXW')" class="hover:bg-slate-50 dark:hover:bg-slate-900 cursor-pointer transition-colors">
+                      <td class="py-2.5 px-3 font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        B 9587 TXW
+                      </td>
+                      <td class="py-2.5 px-2 text-[11px] text-slate-500">CDD</td>
+                      <td class="py-2.5 px-2 font-medium">Aldhi Triyanto</td>
+                      <td class="py-2.5 px-2 text-[11px]">Jkt - Cirebon</td>
+                      <td class="py-2.5 px-2 text-center font-bold text-emerald-600 dark:text-emerald-400">-17.8°C</td>
+                      <td class="py-2.5 px-2 text-center"><span class="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400 rounded text-[10px] font-bold">ON</span></td>
+                      <td class="py-2.5 px-2 text-center"><span class="px-1.5 py-0.5 bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-400 rounded text-[10px]">Jalan</span></td>
+                      <td class="py-2.5 px-2 text-[11px] text-slate-500">KM 79</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="mt-2 text-[10px] text-slate-400">
+              * Klik baris kendaraan untuk memuat telemetry & posisi map
+            </div>
+          </div>
+
+          <!-- Performance Hari Ini (3 cols) -->
+          <div class="lg:col-span-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center space-x-2">
+                  <i data-lucide="gauge" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
+                  <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">Performance Hari Ini</h3>
+                </div>
+                <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">Target 95%+</span>
+              </div>
+
+              <!-- 3 Progress Stats -->
+              <div class="grid grid-cols-3 gap-2 text-center mb-3">
+                <div class="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+                  <div class="text-[9px] text-slate-500 uppercase">On Time</div>
+                  <div class="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">100%</div>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+                  <div class="text-[9px] text-slate-500 uppercase">Suhu SLA</div>
+                  <div class="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">100%</div>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+                  <div class="text-[9px] text-slate-500 uppercase">Utilisasi</div>
+                  <div class="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">100%</div>
+                </div>
+              </div>
+
+              <!-- Operational Note -->
+              <div class="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1 text-[11px] text-slate-600 dark:text-slate-400">
+                <div class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                  <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-600"></i>
+                  <span>Status Operasional Normal</span>
+                </div>
+                <p>Suhu armada dalam kondisi aman (-18°C). Tidak ada exception aktif.</p>
+              </div>
+            </div>
+
+            <button onclick="switchTab('kpi')" class="mt-2 w-full py-1.5 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors">
+              Lihat Matriks KPI &rarr;
+            </button>
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- ======================================================== -->
+      <!-- TAB 2: MONITORING BBM FULL TO FULL (SLIDE 2)             -->
+      <!-- ======================================================== -->
+      <section id="tab-bbm" class="hidden space-y-5">
+        
+        <!-- Header Banner -->
+        <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div class="flex items-center space-x-2">
+              <i data-lucide="fuel" class="w-5 h-5 text-orange-600"></i>
+              <h2 class="text-sm md:text-base font-bold text-slate-900 dark:text-white uppercase tracking-wider">Dashboard Monitoring BBM</h2>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Unit Reefer &bull; Metode Pengendalian Konsumsi BBM Full to Full</p>
+          </div>
+          <button onclick="openFuelCalculatorModal()" class="px-3.5 py-2 bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-lg text-xs transition-colors flex items-center space-x-1.5 self-start sm:self-auto shadow-sm">
+            <i data-lucide="calculator" class="w-3.5 h-3.5"></i>
+            <span>Simulasi Hitung BBM</span>
+          </button>
+        </div>
+
+        <!-- 5 KPI CARDS -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 shadow-sm">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Total Armada</div>
+            <div class="text-xl font-bold text-slate-900 dark:text-white">2 <span class="text-xs font-normal text-slate-500">Unit</span></div>
+            <div class="text-[10px] text-slate-400 mt-0.5">CDE + CDD Reefer</div>
+          </div>
+          <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 shadow-sm">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Total KM Tempuh</div>
+            <div class="text-xl font-bold text-slate-900 dark:text-white">1.250 <span class="text-xs font-normal text-slate-500">KM</span></div>
+            <div class="text-[10px] text-slate-400 mt-0.5">Siklus Berjalan</div>
+          </div>
+          <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 shadow-sm">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Total BBM</div>
+            <div class="text-xl font-bold text-slate-900 dark:text-white">220 <span class="text-xs font-normal text-slate-500">Liter</span></div>
+            <div class="text-[10px] text-slate-400 mt-0.5">Pengisian Full</div>
+          </div>
+          <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 shadow-sm">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Total Biaya BBM</div>
+            <div class="text-xl font-bold text-slate-900 dark:text-white">Rp 2,20 <span class="text-xs font-normal text-slate-500">JT</span></div>
+            <div class="text-[10px] text-slate-400 mt-0.5">Rp10.000 / Liter</div>
+          </div>
+          <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 shadow-sm">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Rata-Rata KM/L</div>
+            <div class="text-xl font-bold text-slate-900 dark:text-white">5,68 <span class="text-xs font-normal text-slate-500">KM/L</span></div>
+            <div class="text-[10px] text-slate-400 mt-0.5">Gabungan Armada</div>
+          </div>
+        </div>
+
+        <!-- TABLE & ALUR SECTION -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+          <!-- LEFT: PERFORMA PER UNIT TABLE (7 cols) -->
+          <div class="lg:col-span-7 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-4">
+            <div>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white mb-2">Performa Per Unit (Aktual vs Target Konsumsi)</h3>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                  <thead class="text-[10px] font-bold uppercase text-slate-500 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+                    <tr>
+                      <th class="py-2.5 px-3">Unit / Driver</th>
+                      <th class="py-2.5 px-2 text-right">KM</th>
+                      <th class="py-2.5 px-2 text-right">BBM (L)</th>
+                      <th class="py-2.5 px-2 text-right font-bold text-slate-900 dark:text-white">KM/L</th>
+                      <th class="py-2.5 px-2 text-right">Target</th>
+                      <th class="py-2.5 px-2 text-right">Deviasi</th>
+                      <th class="py-2.5 px-3 text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                    <tr>
+                      <td class="py-2.5 px-3">
+                        <div class="font-bold text-slate-900 dark:text-white">B 9388 TXW</div>
+                        <div class="text-[10px] text-slate-500">Mohamad Nursyam (CDE)</div>
+                      </td>
+                      <td class="py-2.5 px-2 text-right font-mono">650</td>
+                      <td class="py-2.5 px-2 text-right font-mono">100</td>
+                      <td class="py-2.5 px-2 text-right font-bold text-emerald-600 dark:text-emerald-400 font-mono">6,50</td>
+                      <td class="py-2.5 px-2 text-right text-slate-400 font-mono">6,00</td>
+                      <td class="py-2.5 px-2 text-right font-bold text-emerald-600 dark:text-emerald-400 font-mono">+0,50</td>
+                      <td class="py-2.5 px-3 text-center">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400">
+                          NORMAL
+                        </span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="py-2.5 px-3">
+                        <div class="font-bold text-slate-900 dark:text-white">B 9587 TXW</div>
+                        <div class="text-[10px] text-slate-500">Aldhi Triyanto (CDD)</div>
+                      </td>
+                      <td class="py-2.5 px-2 text-right font-mono">600</td>
+                      <td class="py-2.5 px-2 text-right font-mono">120</td>
+                      <td class="py-2.5 px-2 text-right font-bold text-rose-600 dark:text-rose-400 font-mono">5,00</td>
+                      <td class="py-2.5 px-2 text-right text-slate-400 font-mono">5,50</td>
+                      <td class="py-2.5 px-2 text-right font-bold text-rose-600 dark:text-rose-400 font-mono">-0,50</td>
+                      <td class="py-2.5 px-3 text-center">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-400">
+                          OVER
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Target vs Aktual Bar -->
+            <div class="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
+              <div class="text-slate-800 dark:text-slate-200 font-semibold">Visualisasi Rasio Konsumsi</div>
+              <div>
+                <div class="flex justify-between text-xs mb-1 text-slate-600 dark:text-slate-400">
+                  <span>CDE Reefer (B 9388 TXW)</span>
+                  <span class="font-bold text-emerald-600 dark:text-emerald-400">6,50 / target 6,00 KM/L</span>
+                </div>
+                <div class="w-full bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                  <div class="bg-emerald-600 h-full rounded-full" style="width: 100%;"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between text-xs mb-1 text-slate-600 dark:text-slate-400">
+                  <span>CDD Reefer (B 9587 TXW)</span>
+                  <span class="font-bold text-rose-600 dark:text-rose-400">5,00 / target 5,50 KM/L</span>
+                </div>
+                <div class="w-full bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                  <div class="bg-rose-600 h-full rounded-full" style="width: 90%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT: ALUR FULL TO FULL & ALAT PENDUKUNG (5 cols) -->
+          <div class="lg:col-span-5 space-y-4">
+            
+            <!-- 5 Steps Flowchart -->
+            <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white mb-3">Alur Kontrol Full to Full</h3>
+              <div class="grid grid-cols-5 gap-1 text-center">
+                <div class="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+                  <div class="w-5 h-5 mx-auto bg-slate-800 dark:bg-slate-700 text-white rounded-full flex items-center justify-center font-bold text-[10px] mb-1">1</div>
+                  <div class="text-[10px] font-bold text-slate-800 dark:text-slate-200">FULL</div>
+                  <div class="text-[8px] text-slate-400">Isi Awal</div>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+                  <div class="w-5 h-5 mx-auto bg-slate-800 dark:bg-slate-700 text-white rounded-full flex items-center justify-center font-bold text-[10px] mb-1">2</div>
+                  <div class="text-[10px] font-bold text-slate-800 dark:text-slate-200">KM AWAL</div>
+                  <div class="text-[8px] text-slate-400">Odometer</div>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+                  <div class="w-5 h-5 mx-auto bg-slate-800 dark:bg-slate-700 text-white rounded-full flex items-center justify-center font-bold text-[10px] mb-1">3</div>
+                  <div class="text-[10px] font-bold text-slate-800 dark:text-slate-200">JALAN</div>
+                  <div class="text-[8px] text-slate-400">Delivery</div>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+                  <div class="w-5 h-5 mx-auto bg-slate-800 dark:bg-slate-700 text-white rounded-full flex items-center justify-center font-bold text-[10px] mb-1">4</div>
+                  <div class="text-[10px] font-bold text-slate-800 dark:text-slate-200">FULL</div>
+                  <div class="text-[8px] text-slate-400">Isi Akhir</div>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+                  <div class="w-5 h-5 mx-auto bg-emerald-600 text-white rounded-full flex items-center justify-center font-bold text-[10px] mb-1">5</div>
+                  <div class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">HITUNG</div>
+                  <div class="text-[8px] text-slate-400">KM/L</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Alat Pendukung -->
+            <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white mb-2">Alat Pendukung Monitoring</h3>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <div class="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+                  <div class="font-semibold text-slate-800 dark:text-slate-200">&bull; GPS Tracker</div>
+                  <div class="text-[10px] text-slate-400">Lokasi + Rute + KM</div>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+                  <div class="font-semibold text-slate-800 dark:text-slate-200">&bull; Fuel Card</div>
+                  <div class="text-[10px] text-slate-400">Volume & Biaya Struk</div>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+                  <div class="font-semibold text-slate-800 dark:text-slate-200">&bull; Odometer</div>
+                  <div class="text-[10px] text-slate-400">KM Awal & Akhir Fisik</div>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+                  <div class="font-semibold text-slate-800 dark:text-slate-200">&bull; Temp Logger</div>
+                  <div class="text-[10px] text-slate-400">Beban Suhu Reefer</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- SOP BOX -->
+        <div class="p-4 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 space-y-1">
+          <div class="font-bold text-slate-900 dark:text-white">Standar Operasional Pengendalian BBM (Full to Full)</div>
+          <p>Metode Full to Full diterapkan sebagai standar pengendalian konsumsi BBM armada Reefer dengan memastikan pengisian BBM dilakukan hingga kondisi <strong>FULL pada setiap siklus pengisian</strong>. Data odometer dan liter BBM digunakan untuk menghitung konsumsi aktual secara transparan dan terukur.</p>
+        </div>
+
+      </section>
+
+
+      <!-- ======================================================== -->
+      <!-- TAB 3: KPI & ACTION PLAN (SLIDE 3)                       -->
+      <!-- ======================================================== -->
+      <section id="tab-kpi" class="hidden space-y-5">
+        
+        <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm">
+          <h2 class="text-base font-bold text-slate-900 dark:text-white uppercase tracking-wider">KPI Monitoring & Action Plan</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Output dashboard diarahkan untuk pengendalian biaya, kualitas cold chain, dan disiplin operasional.</p>
+        </div>
+
+        <!-- 6 KPI CARDS -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          
+          <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="text-[10px] font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400 mb-1">FUEL EFFICIENCY</div>
+              <div class="text-lg font-bold text-slate-900 dark:text-white">KM/L Aktual</div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Bandingkan dengan standar unit & rute perjalanan.</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs flex justify-between">
+              <span class="text-slate-500">Target: 5.80 KM/L</span>
+              <span class="font-bold text-emerald-600 dark:text-emerald-400">Aktual: 5.68 KM/L</span>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-1">FUEL COST</div>
+              <div class="text-lg font-bold text-slate-900 dark:text-white">Rp / KM</div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Identifikasi perjalanan berbiaya tinggi dan anomali BBM.</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs flex justify-between">
+              <span class="text-slate-500">Standar Budget: Rp 1.760/KM</span>
+              <span class="font-bold text-emerald-600 dark:text-emerald-400">Terkendali</span>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-1">GPS COMPLIANCE</div>
+              <div class="text-lg font-bold text-slate-900 dark:text-white">% Rute Sesuai</div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Deteksi deviasi rute tidak sah & dwell time berlebih.</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs flex justify-between">
+              <span class="text-slate-500">Toleransi: &lt; 5%</span>
+              <span class="font-bold text-emerald-600 dark:text-emerald-400">Kepatuhan: 98.4%</span>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">DRIVER PERFORMANCE</div>
+              <div class="text-lg font-bold text-slate-900 dark:text-white">Score Disiplin</div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Kecepatan, idling time, ketepatan waktu pengantaran.</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs flex justify-between">
+              <span class="text-slate-500">Rata-rata Score:</span>
+              <span class="font-bold text-slate-800 dark:text-slate-200">92 / 100</span>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-1">TEMPERATURE</div>
+              <div class="text-lg font-bold text-slate-900 dark:text-white">°C Aktual</div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Jaga suhu stabil sesuai SLA produk frozen.</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs flex justify-between">
+              <span class="text-slate-500">Standar: &le; -18.0°C</span>
+              <span class="font-bold text-emerald-600 dark:text-emerald-400">Compliance: 100%</span>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 mb-1">EXCEPTION</div>
+              <div class="text-lg font-bold text-slate-900 dark:text-white">Normal / Warning / Over</div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Prioritaskan follow-up operasional cepat saat ada alert.</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs flex justify-between">
+              <span class="text-slate-500">Pending Exception:</span>
+              <span class="font-bold text-emerald-600 dark:text-emerald-400">0 Kasus</span>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- ======================================================== -->
+      <!-- TAB 4: PERANGKAT MONITORING REEFER (SLIDE 4)             -->
+      <!-- ======================================================== -->
+      <section id="tab-perangkat" class="hidden space-y-5">
+        
+        <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm">
+          <h2 class="text-base font-bold text-slate-900 dark:text-white uppercase tracking-wider">Perangkat Monitoring Kendaraan Reefer</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">8 Komponen IoT & Hardware Telemetri Terpasang pada Armada RACE</p>
+        </div>
+
+        <!-- 8 DEVICE CARDS (Slide 4 exact recreation, simple design) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+          <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="flex items-center space-x-3 mb-2">
+                <div class="w-8 h-8 rounded-lg bg-slate-800 text-white font-bold text-xs flex items-center justify-center">01</div>
+                <h4 class="text-xs font-bold text-slate-900 dark:text-white">GPS Tracker</h4>
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Lokasi, rute, kecepatan, histori jejak perjalanan.</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-[10px]">
+              <span class="font-bold text-blue-600 dark:text-blue-400">SUPPORT</span>
+              <span class="text-emerald-600 dark:text-emerald-400 font-medium">&bull; Aktif</span>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="flex items-center space-x-3 mb-2">
+                <div class="w-8 h-8 rounded-lg bg-slate-800 text-white font-bold text-xs flex items-center justify-center">02</div>
+                <h4 class="text-xs font-bold text-slate-900 dark:text-white">Odometer</h4>
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400">KM awal dan KM akhir fisik kendaraan.</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-[10px]">
+              <span class="font-bold text-blue-600 dark:text-blue-400">SUPPORT</span>
+              <span class="text-emerald-600 dark:text-emerald-400 font-medium">&bull; Terkalibrasi</span>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="flex items-center space-x-3 mb-2">
+                <div class="w-8 h-8 rounded-lg bg-orange-600 text-white font-bold text-xs flex items-center justify-center">03</div>
+                <h4 class="text-xs font-bold text-slate-900 dark:text-white">Fuel Card / Log BBM</h4>
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Liter, biaya, waktu, SPBU resmi pengisian.</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-[10px]">
+              <span class="font-bold text-orange-600 dark:text-orange-400">WAJIB</span>
+              <span class="text-slate-500">SOP Standar</span>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="flex items-center space-x-3 mb-2">
+                <div class="w-8 h-8 rounded-lg bg-emerald-700 text-white font-bold text-xs flex items-center justify-center">04</div>
+                <h4 class="text-xs font-bold text-slate-900 dark:text-white">Temperature Sensor</h4>
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Suhu aktual & alarm otomatis kargo frozen.</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-[10px]">
+              <span class="font-bold text-rose-600 dark:text-rose-400">CRITICAL</span>
+              <span class="text-emerald-600 dark:text-emerald-400 font-medium">-18.2°C Live</span>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="flex items-center space-x-3 mb-2">
+                <div class="w-8 h-8 rounded-lg bg-slate-800 text-white font-bold text-xs flex items-center justify-center">05</div>
+                <h4 class="text-xs font-bold text-slate-900 dark:text-white">Data Logger Reefer</h4>
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Histori temperatur untuk sertifikasi audit.</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-[10px]">
+              <span class="font-bold text-blue-600 dark:text-blue-400">SUPPORT</span>
+              <span class="text-slate-500 font-mono">10.000 logs</span>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="flex items-center space-x-3 mb-2">
+                <div class="w-8 h-8 rounded-lg bg-slate-800 text-white font-bold text-xs flex items-center justify-center">06</div>
+                <h4 class="text-xs font-bold text-slate-900 dark:text-white">Hour Meter Reefer</h4>
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Running hour mesin pendingin kendaraan.</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-[10px]">
+              <span class="font-bold text-blue-600 dark:text-blue-400">SUPPORT</span>
+              <span class="text-slate-700 dark:text-slate-300 font-mono">1.482 Jam</span>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="flex items-center space-x-3 mb-2">
+                <div class="w-8 h-8 rounded-lg bg-slate-800 text-white font-bold text-xs flex items-center justify-center">07</div>
+                <h4 class="text-xs font-bold text-slate-900 dark:text-white">Door Sensor</h4>
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Status & durasi pintu box terbuka.</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-[10px]">
+              <span class="font-bold text-blue-600 dark:text-blue-400">SUPPORT</span>
+              <span class="text-emerald-600 dark:text-emerald-400 font-medium">Tertutup</span>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="flex items-center space-x-3 mb-2">
+                <div class="w-8 h-8 rounded-lg bg-slate-800 text-white font-bold text-xs flex items-center justify-center">08</div>
+                <h4 class="text-xs font-bold text-slate-900 dark:text-white">Dashboard Monitoring</h4>
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400">KPI & exception management terpusat.</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-[10px]">
+              <span class="font-bold text-blue-600 dark:text-blue-400">SUPPORT</span>
+              <span class="text-blue-600 dark:text-blue-400 font-medium">Online</span>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ==================== FUEL CALCULATOR MODAL ==================== -->
+  <div id="fuel-calc-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-sm w-full p-5 shadow-xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+        <h3 class="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Kalkulator BBM Full to Full</h3>
+        <button onclick="closeFuelCalculatorModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-2.5 text-xs">
+        <div>
+          <label class="block text-slate-600 dark:text-slate-400 mb-1">Pilih Unit</label>
+          <select id="calc-unit" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white font-medium">
+            <option value="CDE">B 9388 TXW - CDE (Target 6.00 KM/L)</option>
+            <option value="CDD">B 9587 TXW - CDD (Target 5.50 KM/L)</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-slate-600 dark:text-slate-400 mb-1">KM Tempuh</label>
+            <input type="number" id="calc-km" value="650" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white font-mono font-bold">
+          </div>
+          <div>
+            <label class="block text-slate-600 dark:text-slate-400 mb-1">Liter BBM</label>
+            <input type="number" id="calc-liters" value="100" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white font-mono font-bold">
+          </div>
+        </div>
+
+        <div id="calc-result" class="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1 text-xs">
+          <div class="flex justify-between">
+            <span class="text-slate-500">Hasil:</span>
+            <span class="font-bold text-emerald-600 dark:text-emerald-400 font-mono" id="calc-kml-val">6.50 KM/L</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Status:</span>
+            <span class="font-semibold text-emerald-600 dark:text-emerald-400" id="calc-dev-val">+0.50 (NORMAL)</span>
+          </div>
+          <div class="flex justify-between pt-1 border-t border-slate-200 dark:border-slate-800">
+            <span class="text-slate-500">Total Biaya:</span>
+            <span class="font-bold text-slate-900 dark:text-white font-mono" id="calc-cost-val">Rp 1.000.000</span>
+          </div>
+        </div>
+      </div>
+
+      <button onclick="calculateFuel()" class="w-full py-2 bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-lg text-xs transition-colors">
+        Hitung
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== FLOATING EMERGENCY TOAST NOTIFICATION ==================== -->
+  <div id="emergency-toast" class="fixed top-4 right-4 z-50 max-w-md w-full bg-white dark:bg-slate-950 border-2 border-rose-500 rounded-2xl p-4 shadow-2xl transition-all duration-300 transform -translate-y-40 opacity-0 pointer-events-none">
+    <div class="flex items-start space-x-3">
+      <div class="w-9 h-9 rounded-xl bg-rose-600 text-white flex items-center justify-center flex-shrink-0 animate-bounce">
+        <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-black tracking-wider uppercase text-rose-600 dark:text-rose-400 flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+            CRITICAL TELEMETRY ALERT
+          </span>
+          <span class="text-[10px] font-mono text-slate-400">10:24 WIB</span>
+        </div>
+        <h4 class="text-xs font-bold text-slate-900 dark:text-white mt-0.5">B 9388 TXW: Kenaikan Suhu & Pintu Terbuka</h4>
+        <p class="text-[11px] text-slate-600 dark:text-slate-300 mt-1 leading-snug">
+          Pintu box terbuka <strong class="text-rose-600 dark:text-rose-400" id="toast-door-timer">05m:12s</strong> di Tol KM 42. Suhu melonjak ke <strong class="text-rose-600 dark:text-rose-400" id="toast-temp">-14.8°C</strong>. Truk berhenti di bahu jalan.
+        </p>
+        <div class="mt-3 flex items-center gap-2">
+          <button onclick="openDispatcherModal()" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm">
+            <i data-lucide="phone-call" class="w-3.5 h-3.5"></i>
+            <span>Tindakan Dispatcher</span>
+          </button>
+          <button onclick="closeEmergencyToast()" class="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-medium transition-all">
+            Tutup
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DISPATCHER ACTION & COLD STORAGE MODAL ==================== -->
+  <div id="dispatcher-action-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full p-5 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+        <div class="flex items-center space-x-2">
+          <div class="p-1.5 bg-rose-100 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 rounded-lg">
+            <i data-lucide="shield-alert" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Pusat Tindakan Darurat Dispatcher</h3>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400">Protokol Penyelamatan Muatan Frozen (SLA Target &lt; 15 Menit)</p>
+          </div>
+        </div>
+        <button onclick="closeDispatcherModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Vehicle & Incident Summary -->
+      <div class="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
+        <div class="flex justify-between items-center">
+          <span class="font-bold text-slate-900 dark:text-white">Unit B 9388 TXW (CDE Reefer)</span>
+          <span class="px-2 py-0.5 bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-400 rounded font-bold text-[10px]">CRITICAL SLA</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-600 dark:text-slate-400">
+          <div>Driver: <strong class="text-slate-900 dark:text-white">Mohamad Nursyam</strong></div>
+          <div>Kontak: <strong class="text-slate-900 dark:text-white">+62 812-8890-4412</strong></div>
+          <div>Muatan: <strong class="text-slate-900 dark:text-white">7.800 Kg Frozen Food</strong></div>
+          <div>Lokasi: <strong class="text-slate-900 dark:text-white">Tol KM 42 (Bahu Jalan)</strong></div>
+        </div>
+      </div>
+
+      <!-- Quick Action Buttons -->
+      <div class="space-y-2 text-xs">
+        <div class="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Pilihan Tindakan Cepat:</div>
+        
+        <!-- Action 1: Call Driver -->
+        <div class="p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between hover:border-emerald-500 transition-colors">
+          <div class="flex items-center space-x-2.5">
+            <div class="p-2 bg-emerald-100 dark:bg-emerald-950 text-emerald-600 rounded-lg"><i data-lucide="phone-call" class="w-4 h-4"></i></div>
+            <div>
+              <div class="font-bold text-slate-900 dark:text-white text-xs">Hubungi Driver Langsung</div>
+              <div class="text-[10px] text-slate-500">Instruksikan periksa grendel pintu & reset thermostat</div>
+            </div>
+          </div>
+          <button onclick="alert('Panggilan radio/seluler tersambung ke driver Mohamad Nursyam (+62 812-8890-4412)!')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-xs">
+            Hubungi
+          </button>
+        </div>
+
+        <!-- Action 2: Reroute to Cold Storage -->
+        <div class="p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between hover:border-blue-500 transition-colors">
+          <div class="flex items-center space-x-2.5">
+            <div class="p-2 bg-blue-100 dark:bg-blue-950 text-blue-600 rounded-lg"><i data-lucide="warehouse" class="w-4 h-4"></i></div>
+            <div>
+              <div class="font-bold text-slate-900 dark:text-white text-xs">Arahkan ke Cold Storage Darurat</div>
+              <div class="text-[10px] text-slate-500">PT. Karawang Cold Hub - 4.2 KM (Est. 8 Menit)</div>
+            </div>
+          </div>
+          <button onclick="alert('Rute darurat menuju Cold Storage Karawang telah dikirim ke unit navigasi GPS driver!')" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-xs">
+            Kirim Rute
+          </button>
+        </div>
+
+        <!-- Action 3: Dispatch Technician -->
+        <div class="p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between hover:border-purple-500 transition-colors">
+          <div class="flex items-center space-x-2.5">
+            <div class="p-2 bg-purple-100 dark:bg-purple-950 text-purple-600 rounded-lg"><i data-lucide="wrench" class="w-4 h-4"></i></div>
+            <div>
+              <div class="font-bold text-slate-900 dark:text-white text-xs">Dispatch Teknisi Reefer Terdekat</div>
+              <div class="text-[10px] text-slate-500">Pos Service Cikampek Utama (ETA: 12 Menit)</div>
+            </div>
+          </div>
+          <button onclick="alert('Tim teknisi reefer diberangkatkan menuju lokasi Tol KM 42!')" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg text-xs">
+            Dispatch
+          </button>
+        </div>
+      </div>
+
+      <div class="pt-2 flex justify-end">
+        <button onclick="closeDispatcherModal()" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl text-xs">
+          Tutup Dialog
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== JAVASCRIPT ==================== -->
+  <script>
+    lucide.createIcons();
+
+    let isAlarmSimulated = false;
+    let liveTempChart = null;
+    let leafletMap = null;
+
+    // Theme Management (Light / Dark Mode)
+    function toggleTheme() {
+      const root = document.getElementById('html-root');
+      if (root.classList.contains('dark')) {
+        root.classList.remove('dark');
+        root.classList.add('light');
+        localStorage.setItem('theme', 'light');
+      } else {
+        root.classList.remove('light');
+        root.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      }
+      updateChartColors();
+    }
+
+    // Tab Navigation Logic
+    function switchTab(tabId) {
+      const tabs = ['dashboard', 'bbm', 'kpi', 'perangkat'];
+      tabs.forEach(id => {
+        const el = document.getElementById('tab-' + id);
+        const navEl = document.getElementById('nav-' + id);
+        if (el) {
+          if (id === tabId) el.classList.remove('hidden');
+          else el.classList.add('hidden');
+        }
+        if (navEl) {
+          if (id === tabId) {
+            navEl.classList.add('text-white', 'bg-blue-700', 'dark:bg-blue-600', 'font-semibold', 'shadow-sm');
+            navEl.classList.remove('text-slate-600', 'dark:text-slate-300');
+          } else {
+            navEl.classList.remove('text-white', 'bg-blue-700', 'dark:bg-blue-600', 'font-semibold', 'shadow-sm');
+            navEl.classList.add('text-slate-600', 'dark:text-slate-300');
+          }
+        }
+      });
+
+      const titleEl = document.getElementById('page-title');
+      if (tabId === 'dashboard') titleEl.innerText = 'Monitoring Kendaraan Frozen';
+      else if (tabId === 'bbm') titleEl.innerText = 'Sistem Monitoring BBM Full to Full';
+      else if (tabId === 'kpi') titleEl.innerText = 'KPI Monitoring & Action Plan';
+      else if (tabId === 'perangkat') titleEl.innerText = '8 Perangkat Monitoring Kendaraan Reefer';
+
+      lucide.createIcons();
+      if (leafletMap) setTimeout(() => leafletMap.invalidateSize(), 200);
+    }
+
+    // Vehicle Data
+    const fleetData = {
+      'B 9388 TXW': {
+        plate: 'B 9388 TXW',
+        type: 'CDE Reefer',
+        driver: 'Mohamad Nursyam',
+        route: 'Jakarta - Bandung',
+        statusShipment: 'Dalam Perjalanan',
+        cargo: 'Frozen Food (7.800 Kg)',
+        locationName: 'Tol Jkt-Ckm KM 42',
+        speed: 65,
+        fuelPercent: 68,
+        tempActual: -18.2,
+        doorStatus: 'Tertutup',
+        powerSupply: '24.2 V',
+        reeferStatus: 'ON',
+        lat: -6.3718,
+        lng: 107.3188,
+        tempHistory: [-18.0, -18.1, -18.3, -18.2, -18.2, -18.2]
+      },
+      'B 9587 TXW': {
+        plate: 'B 9587 TXW',
+        type: 'CDD Reefer',
+        driver: 'Aldhi Triyanto',
+        route: 'Jakarta - Cirebon',
+        statusShipment: 'Dalam Perjalanan',
+        cargo: 'Meat & Ice Cream (12.400 Kg)',
+        locationName: 'Tol Cipali KM 79',
+        speed: 72,
+        fuelPercent: 54,
+        tempActual: -17.8,
+        doorStatus: 'Tertutup',
+        powerSupply: '24.0 V',
+        reeferStatus: 'ON',
+        lat: -6.5020,
+        lng: 107.5020,
+        tempHistory: [-17.5, -17.6, -17.7, -17.8, -17.8, -17.8]
+      }
+    };
+
+    function selectVehicle(plate) {
+      const data = fleetData[plate];
+      if (!data) return;
+
+      document.getElementById('vehicle-select').value = plate;
+      document.getElementById('selected-plate').innerText = data.plate;
+      document.getElementById('selected-type').innerText = data.type;
+      document.getElementById('selected-driver').innerText = data.driver;
+      document.getElementById('selected-route').innerText = data.route;
+      document.getElementById('selected-shipment-status').innerText = data.statusShipment;
+      document.getElementById('selected-cargo').innerText = data.cargo;
+      document.getElementById('telemetry-location').innerText = data.locationName;
+      document.getElementById('telemetry-speed').innerHTML = `${data.speed} <span class="text-[10px] font-normal text-slate-500">km/h</span>`;
+      document.getElementById('telemetry-fuel').innerText = `${data.fuelPercent}%`;
+      document.getElementById('chart-temp-actual').innerHTML = `${data.tempActual} <span class="text-xs font-normal">°C</span>`;
+      document.getElementById('sensor-reefer').innerText = data.reeferStatus;
+      document.getElementById('sensor-door').innerText = data.doorStatus;
+      document.getElementById('sensor-power').innerText = data.powerSupply;
+
+      if (liveTempChart) {
+        liveTempChart.data.datasets[0].data = data.tempHistory;
+        liveTempChart.update();
+      }
+
+      if (leafletMap && data.lat && data.lng) {
+        leafletMap.panTo([data.lat, data.lng], { animate: true });
+      }
+    }
+
+    let truckMarkers = {};
+
+    // Helper: Create Normal Live Marker Icon
+    function getNormalTruckIcon(plate) {
+      return L.divIcon({
+        html: `
+          <div class="relative flex items-center justify-center w-8 h-8">
+            <div class="absolute w-8 h-8 rounded-full bg-blue-500/30 dark:bg-blue-400/20 map-radar-pulse"></div>
+            <div class="relative w-6 h-6 bg-blue-600 dark:bg-blue-500 text-white rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900 shadow-md text-[10px] transform hover:scale-110 transition-transform">
+              🚚
+            </div>
+          </div>
+        `,
+        className: 'custom-live-marker',
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+      });
+    }
+
+    // Helper: Create Blinking Alert Marker Icon
+    function getAlarmTruckIcon(plate) {
+      return L.divIcon({
+        html: `
+          <div class="relative flex items-center justify-center w-10 h-10">
+            <!-- Pulsing Emergency Rings -->
+            <div class="absolute w-10 h-10 rounded-full bg-rose-500/40 map-radar-pulse"></div>
+            <div class="absolute w-7 h-7 rounded-full bg-amber-500/50 map-radar-pulse" style="animation-delay: 0.4s;"></div>
+            <!-- Blinking Core Beacon -->
+            <div class="relative w-7 h-7 map-alert-beacon text-white rounded-full flex items-center justify-center border-2 border-white shadow-xl text-xs font-bold">
+              🚨
+            </div>
+          </div>
+        `,
+        className: 'custom-alert-marker',
+        iconSize: [40, 40],
+        iconAnchor: [20, 20]
+      });
+    }
+
+    // Detailed Highway Route Coordinates (Trans Jawa)
+    const route1Coordinates = [
+      [-6.2088, 106.8456], // Jakarta
+      [-6.2250, 106.9200],
+      [-6.2415, 106.9924], // Bekasi Barat
+      [-6.2650, 107.0800], // Cikarang Utama
+      [-6.3200, 107.2000], // Karawang Barat
+      [-6.3718, 107.3188], // Karawang Timur KM 42
+      [-6.4200, 107.3800], // Dawuan
+      [-6.4600, 107.4100], // Cikampek Utama
+      [-6.5562, 107.4431], // Purwakarta
+      [-6.7200, 107.4800], // Cipularang KM 90
+      [-6.8400, 107.5100], // Padalarang
+      [-6.8900, 107.5600], // Pasteur
+      [-6.9175, 107.6191]  // Bandung Kota
+    ];
+
+    const route2Coordinates = [
+      [-6.2088, 106.8456], // Jakarta
+      [-6.2415, 106.9924], // Bekasi
+      [-6.3200, 107.2000], // Karawang
+      [-6.4400, 107.4200], // Cikampek
+      [-6.4750, 107.5600], // Kalijati
+      [-6.5020, 107.5020], // KM 79 Cipali
+      [-6.5300, 107.7200], // Subang
+      [-6.5800, 108.0200], // Kertajati
+      [-6.7320, 108.5523]  // Cirebon
+    ];
+
+    // Truck Simulation Movement States
+    let truckSimulation = {
+      'B 9388 TXW': {
+        route: route1Coordinates,
+        index: 5,         // Start around Karawang KM 42
+        progress: 0.1,    // Segment interpolation
+        speed: 65,
+        isStopped: false,
+        kmBase: 42.0
+      },
+      'B 9587 TXW': {
+        route: route2Coordinates,
+        index: 5,         // Start around Cipali KM 79
+        progress: 0.2,
+        speed: 72,
+        isStopped: false,
+        kmBase: 79.0
+      }
+    };
+
+    // Interpolate Coordinates helper
+    function getInterpolatedPoint(p1, p2, t) {
+      return [
+        p1[0] + (p2[0] - p1[0]) * t,
+        p1[1] + (p2[1] - p1[1]) * t
+      ];
+    }
+
+    // Driving Animation Loop
+    function startDrivingAnimation() {
+      setInterval(() => {
+        Object.keys(truckSimulation).forEach(plate => {
+          const sim = truckSimulation[plate];
+          if (sim.isStopped) return; // Truck is halted due to alarm
+
+          // Advance progress smoothly
+          sim.progress += 0.04;
+          if (sim.progress >= 1.0) {
+            sim.progress = 0;
+            sim.index++;
+            if (sim.index >= sim.route.length - 1) {
+              sim.index = 0; // Loop route
+            }
+          }
+
+          const currentPoint = sim.route[sim.index];
+          const nextPoint = sim.route[sim.index + 1] || sim.route[0];
+          const [lat, lng] = getInterpolatedPoint(currentPoint, nextPoint, sim.progress);
+
+          // Update fleetData
+          fleetData[plate].lat = lat;
+          fleetData[plate].lng = lng;
+
+          // Slight realistic speed variation (+- 2 km/h)
+          sim.speed = Math.max(58, Math.min(74, sim.speed + (Math.random() * 2 - 1)));
+          fleetData[plate].speed = Math.round(sim.speed);
+
+          // Update Marker Position on Leaflet Map
+          if (truckMarkers[plate]) {
+            truckMarkers[plate].setLatLng([lat, lng]);
+          }
+
+          // If this vehicle is currently selected in dashboard view, update real-time telemetry box
+          if (selectedTruck === plate && !isAlarmSimulated) {
+            const speedEl = document.getElementById('telemetry-speed');
+            if (speedEl) {
+              speedEl.innerHTML = `${Math.round(sim.speed)} <span class="text-[10px] font-normal text-slate-500">km/h</span>`;
+            }
+          }
+        });
+      }, 350); // Update every 350ms for buttery smooth vehicle driving animation
+    }
+
+    // Leaflet Map Init
+    function initMaps() {
+      const mapContainer = document.getElementById('live-map');
+      if (mapContainer && !leafletMap) {
+        leafletMap = L.map('live-map', { zoomControl: false }).setView([-6.38, 107.35], 9);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap'
+        }).addTo(leafletMap);
+
+        // Draw Polyline Route 1 (Jakarta - Bandung)
+        L.polyline(route1Coordinates, {
+          color: '#2563EB',
+          weight: 3.5,
+          opacity: 0.8,
+          dashArray: '4, 6'
+        }).addTo(leafletMap);
+
+        // Draw Polyline Route 2 (Jakarta - Cirebon)
+        L.polyline(route2Coordinates, {
+          color: '#0D9488',
+          weight: 2.5,
+          opacity: 0.6,
+          dashArray: '3, 6'
+        }).addTo(leafletMap);
+
+        // Marker 1: B 9388 TXW
+        truckMarkers['B 9388 TXW'] = L.marker([-6.3718, 107.3188], { 
+          icon: getNormalTruckIcon('B 9388 TXW') 
+        }).addTo(leafletMap);
+        truckMarkers['B 9388 TXW'].bindPopup('<b>B 9388 TXW</b><br>Suhu: -18.2°C (Normal)<br>KM 42 Karawang &bull; Dalam Perjalanan');
+
+        // Marker 2: B 9587 TXW
+        truckMarkers['B 9587 TXW'] = L.marker([-6.5020, 107.5020], { 
+          icon: getNormalTruckIcon('B 9587 TXW') 
+        }).addTo(leafletMap);
+        truckMarkers['B 9587 TXW'].bindPopup('<b>B 9587 TXW</b><br>Suhu: -17.8°C (Normal)<br>KM 79 Cipali &bull; Dalam Perjalanan');
+
+        // Start live driving motion
+        startDrivingAnimation();
+      }
+    }
+
+    function recenterMap() {
+      if (leafletMap) leafletMap.setView([-6.38, 107.35], 9, { animate: true });
+    }
+
+    // Chart.js Init
+    function initTempChart() {
+      const ctx = document.getElementById('tempChart');
+      if (ctx) {
+        liveTempChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: ['08:00', '08:30', '09:00', '09:30', '10:00', '10:24'],
+            datasets: [
+              {
+                label: 'Suhu Aktual',
+                data: [-18.0, -18.1, -18.3, -18.2, -18.2, -18.2],
+                borderColor: '#10B981',
+                backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.3,
+                pointRadius: 2.5
+              },
+              {
+                label: 'Set Point (-18°C)',
+                data: [-18.0, -18.0, -18.0, -18.0, -18.0, -18.0],
+                borderColor: '#94A3B8',
+                borderWidth: 1.5,
+                borderDash: [3, 3],
+                pointRadius: 0,
+                fill: false
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false }
+            },
+            scales: {
+              y: {
+                min: -22,
+                max: -12,
+                ticks: { font: { size: 9 }, stepSize: 4 },
+                grid: { color: 'rgba(148, 163, 184, 0.1)' }
+              },
+              x: {
+                ticks: { font: { size: 9 } },
+                grid: { display: false }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    function updateChartColors() {
+      if (!liveTempChart) return;
+      liveTempChart.update();
+    }
+
+    // Audio Alert Synthesizer (Native Web Audio API)
+    function playAlarmSound() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const playTone = (freq, delay, dur) => {
+          setTimeout(() => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(freq / 2, audioCtx.currentTime + dur);
+            gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + dur);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + dur);
+          }, delay);
+        };
+        playTone(880, 0, 0.18);
+        playTone(880, 180, 0.18);
+        playTone(980, 360, 0.25);
+      } catch (e) {
+        console.log("Audio alert initialized without user gesture block", e);
+      }
+    }
+
+    // Live Tickers & Timer Variables
+    let doorSecondsElapsed = 312; // 5 min 12 sec
+    let doorTimerInterval = null;
+    let tempAnimationInterval = null;
+
+    function formatDoorTime(totalSecs) {
+      const mins = Math.floor(totalSecs / 60);
+      const secs = totalSecs % 60;
+      return `${String(mins).padStart(2, '0')}m:${String(secs).padStart(2, '0')}s`;
+    }
+
+    // Toast Control
+    function showEmergencyToast() {
+      const toast = document.getElementById('emergency-toast');
+      if (toast) {
+        toast.classList.remove('-translate-y-40', 'opacity-0', 'pointer-events-none');
+        toast.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
+      }
+    }
+
+    function closeEmergencyToast() {
+      const toast = document.getElementById('emergency-toast');
+      if (toast) {
+        toast.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
+        toast.classList.add('-translate-y-40', 'opacity-0', 'pointer-events-none');
+      }
+    }
+
+    // Dispatcher Action Modal Control
+    function openDispatcherModal() {
+      const modal = document.getElementById('dispatcher-action-modal');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeDispatcherModal() {
+      const modal = document.getElementById('dispatcher-action-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    // Alarm Simulator
+    function toggleAlarmSimulation() {
+      isAlarmSimulated = !isAlarmSimulated;
+      const statNormal = document.getElementById('stat-suhu-normal');
+      const statWarning = document.getElementById('stat-suhu-warning');
+      const statPerjalanan = document.getElementById('stat-dalam-perjalanan');
+      const alarmBox = document.getElementById('alarm-box-content');
+      const btnText = document.getElementById('btn-sim-text');
+
+      // Clear existing intervals
+      if (doorTimerInterval) clearInterval(doorTimerInterval);
+      if (tempAnimationInterval) clearInterval(tempAnimationInterval);
+
+      if (isAlarmSimulated) {
+        // Trigger Audio Warning
+        playAlarmSound();
+
+        // Update Top Status Cards to realistic ratios
+        statNormal.innerText = '1';
+        statNormal.nextElementSibling.innerText = 'Unit (50%)';
+        statWarning.innerText = '1';
+        statWarning.nextElementSibling.innerText = 'Unit (50%)';
+        statPerjalanan.innerText = '1';
+        btnText.innerText = 'Reset';
+
+        // Halt truck B 9388 TXW and trigger emergency flashing beacon
+        truckSimulation['B 9388 TXW'].isStopped = true;
+
+        if (truckMarkers['B 9388 TXW']) {
+          truckMarkers['B 9388 TXW'].setIcon(getAlarmTruckIcon('B 9388 TXW'));
+          truckMarkers['B 9388 TXW'].bindPopup(`
+            <div class="p-1 text-xs">
+              <div class="font-bold text-rose-600 flex items-center gap-1 mb-1">
+                🚨 PERINGATAN: B 9388 TXW
+              </div>
+              <div class="text-slate-700 dark:text-slate-200">
+                Pintu Terbuka: <strong class="text-rose-600" id="map-door-timer">05m:12s</strong><br>
+                Suhu Kargo: <strong class="text-rose-600" id="map-temp">-14.8°C</strong><br>
+                Status: <strong class="text-amber-600">Berhenti di Bahu Jalan</strong>
+              </div>
+            </div>
+          `).openPopup();
+
+          if (leafletMap) {
+            leafletMap.flyTo(truckMarkers['B 9388 TXW'].getLatLng(), 10, { duration: 0.8 });
+          }
+        }
+
+        // Live Door Open Seconds Counter
+        doorSecondsElapsed = 312;
+        doorTimerInterval = setInterval(() => {
+          doorSecondsElapsed++;
+          const formatted = formatDoorTime(doorSecondsElapsed);
+          const sensorDoor = document.getElementById('sensor-door');
+          const toastTimer = document.getElementById('toast-door-timer');
+          const mapTimer = document.getElementById('map-door-timer');
+          if (sensorDoor) sensorDoor.innerText = `Terbuka (${formatted})`;
+          if (toastTimer) toastTimer.innerText = formatted;
+          if (mapTimer) mapTimer.innerText = formatted;
+        }, 1000);
+
+        // Dynamic Temperature Count-up Animation (-18.2°C -> -14.8°C)
+        let curTemp = -18.2;
+        tempAnimationInterval = setInterval(() => {
+          if (curTemp < -14.8) {
+            curTemp += 0.3;
+            if (curTemp > -14.8) curTemp = -14.8;
+            const tempStr = curTemp.toFixed(1);
+            document.getElementById('chart-temp-actual').innerHTML = `${tempStr} <span class="text-xs font-normal">°C</span>`;
+            const toastTemp = document.getElementById('toast-temp');
+            const mapTemp = document.getElementById('map-temp');
+            if (toastTemp) toastTemp.innerText = `${tempStr}°C`;
+            if (mapTemp) mapTemp.innerText = `${tempStr}°C`;
+          } else {
+            clearInterval(tempAnimationInterval);
+          }
+        }, 120);
+
+        // Update SLA Badge & Chart to Warning Red
+        const slaBadge = document.getElementById('sla-status-badge');
+        if (slaBadge) {
+          slaBadge.innerText = '⚠️ SLA TERLANGGAR (> -15°C)';
+          slaBadge.className = 'text-[9px] text-rose-600 dark:text-rose-400 font-black animate-pulse';
+        }
+
+        if (liveTempChart) {
+          liveTempChart.data.datasets[0].data = [-18.0, -18.1, -18.3, -18.2, -16.5, -14.8];
+          liveTempChart.data.datasets[0].borderColor = '#EF4444';
+          liveTempChart.data.datasets[0].backgroundColor = 'rgba(239, 68, 68, 0.15)';
+          liveTempChart.update();
+        }
+
+        // Alarm Box UI
+        alarmBox.innerHTML = `
+          <div class="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 rounded-lg space-y-2 text-xs animate-pulse">
+            <div class="flex items-center justify-between text-rose-700 dark:text-rose-300 font-bold">
+              <span class="flex items-center gap-1.5"><i data-lucide="alert-octagon" class="w-3.5 h-3.5"></i> DOOR & TEMP SLA BREACH</span>
+              <span class="text-[10px] font-mono">10:24 WIB</span>
+            </div>
+            <div class="text-slate-900 dark:text-white font-semibold">B 9388 TXW: Pintu kargo terbuka &gt; 5 menit.</div>
+            <div class="text-slate-600 dark:text-slate-300 text-[11px]">Suhu naik ke <strong class="text-rose-600 dark:text-rose-400">-14.8°C</strong>. Truk berhenti di bahu jalan Tol KM 42.</div>
+            <div class="pt-1 flex gap-2">
+              <button onclick="openDispatcherModal()" class="w-full py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded font-bold text-[10px]">
+                📞 Tindakan Dispatcher Segera
+              </button>
+            </div>
+          </div>
+        `;
+
+        document.getElementById('selected-status-badge').className = 'px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-400 border border-rose-300 dark:border-rose-800';
+        document.getElementById('selected-status-badge').innerText = 'CRITICAL';
+        document.getElementById('sensor-door').innerText = 'Terbuka (05m:12s)';
+        document.getElementById('sensor-door').className = 'font-bold text-rose-600 dark:text-rose-400';
+        document.getElementById('chart-temp-actual').className = 'text-xl font-bold text-rose-600 dark:text-rose-400 mt-0.5';
+        document.getElementById('telemetry-speed').innerHTML = `0 <span class="text-[10px] font-normal text-rose-500 font-bold">(Berhenti)</span>`;
+
+        // Update Table Row 1
+        const row1 = document.getElementById('table-row-B9388');
+        if (row1) row1.className = 'bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 cursor-pointer transition-colors';
+        const dot1 = document.getElementById('table-dot-B9388');
+        if (dot1) dot1.className = 'w-2 h-2 rounded-full bg-rose-500 animate-ping';
+        const suhu1 = document.getElementById('table-suhu-B9388');
+        if (suhu1) {
+          suhu1.className = 'py-2.5 px-2 text-center font-bold text-rose-600 dark:text-rose-400 font-mono';
+          suhu1.innerText = '-14.8°C';
+        }
+        const status1 = document.getElementById('table-status-B9388');
+        if (status1) {
+          status1.className = 'px-1.5 py-0.5 bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 rounded text-[10px] font-bold';
+          status1.innerText = 'Bahu Jalan';
+        }
+        const lokasi1 = document.getElementById('table-lokasi-B9388');
+        if (lokasi1) lokasi1.innerText = 'KM 42 (Berhenti)';
+
+        // Show Toast Notification
+        showEmergencyToast();
+
+      } else {
+        // RESET TO NORMAL
+        closeEmergencyToast();
+        closeDispatcherModal();
+
+        statNormal.innerText = '2';
+        statNormal.nextElementSibling.innerText = 'Unit (100%)';
+        statWarning.innerText = '0';
+        statWarning.nextElementSibling.innerText = 'Unit (0%)';
+        statPerjalanan.innerText = '2';
+        btnText.innerText = 'Uji Alarm';
+
+        // Resume truck movement
+        truckSimulation['B 9388 TXW'].isStopped = false;
+        truckSimulation['B 9388 TXW'].speed = 65;
+
+        // Reset Marker on Map
+        if (truckMarkers['B 9388 TXW']) {
+          truckMarkers['B 9388 TXW'].setIcon(getNormalTruckIcon('B 9388 TXW'));
+          truckMarkers['B 9388 TXW'].bindPopup('<b>B 9388 TXW</b><br>Suhu: -18.2°C (Normal)<br>KM 42 Karawang &bull; Dalam Perjalanan');
+          truckMarkers['B 9388 TXW'].closePopup();
+        }
+
+        // Restore SLA Badge & Chart to Green Normal
+        const slaBadge = document.getElementById('sla-status-badge');
+        if (slaBadge) {
+          slaBadge.innerText = 'SLA Terpenuhi';
+          slaBadge.className = 'text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold';
+        }
+
+        if (liveTempChart) {
+          liveTempChart.data.datasets[0].data = [-18.0, -18.1, -18.3, -18.2, -18.2, -18.2];
+          liveTempChart.data.datasets[0].borderColor = '#10B981';
+          liveTempChart.data.datasets[0].backgroundColor = 'rgba(16, 185, 129, 0.08)';
+          liveTempChart.update();
+        }
+
+        // Restore Table Row 1
+        const row1 = document.getElementById('table-row-B9388');
+        if (row1) row1.className = 'hover:bg-slate-50 dark:hover:bg-slate-900 cursor-pointer transition-colors';
+        const dot1 = document.getElementById('table-dot-B9388');
+        if (dot1) dot1.className = 'w-2 h-2 rounded-full bg-emerald-500';
+        const suhu1 = document.getElementById('table-suhu-B9388');
+        if (suhu1) {
+          suhu1.className = 'py-2.5 px-2 text-center font-bold text-emerald-600 dark:text-emerald-400 font-mono';
+          suhu1.innerText = '-18.2°C';
+        }
+        const status1 = document.getElementById('table-status-B9388');
+        if (status1) {
+          status1.className = 'px-1.5 py-0.5 bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-400 rounded text-[10px]';
+          status1.innerText = 'Jalan';
+        }
+        const lokasi1 = document.getElementById('table-lokasi-B9388');
+        if (lokasi1) lokasi1.innerText = 'KM 42';
+
+        alarmBox.innerHTML = `
+          <div class="p-6 text-center flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+            <div class="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2">
+              <i data-lucide="check" class="w-5 h-5"></i>
+            </div>
+            <div class="text-xs font-bold text-slate-800 dark:text-slate-200">Tidak Ada Alarm</div>
+            <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Semua parameter berjalan normal</div>
+          </div>
+        `;
+
+        selectVehicle('B 9388 TXW');
+      }
+      lucide.createIcons();
+    }
+
+    // Modal Fuel Calculator
+    function openFuelCalculatorModal() {
+      document.getElementById('fuel-calc-modal').classList.remove('hidden');
+      calculateFuel();
+    }
+
+    function closeFuelCalculatorModal() {
+      document.getElementById('fuel-calc-modal').classList.add('hidden');
+    }
+
+    function calculateFuel() {
+      const unit = document.getElementById('calc-unit').value;
+      const km = parseFloat(document.getElementById('calc-km').value) || 0;
+      const liters = parseFloat(document.getElementById('calc-liters').value) || 1;
+      const target = unit === 'CDE' ? 6.00 : 5.50;
+      const kml = km / liters;
+      const dev = kml - target;
+      const cost = liters * 10000;
+
+      document.getElementById('calc-kml-val').innerText = kml.toFixed(2) + ' KM/L';
+      const devEl = document.getElementById('calc-dev-val');
+      if (dev >= 0) {
+        devEl.innerText = `+${dev.toFixed(2)} (NORMAL)`;
+        devEl.className = 'font-semibold text-emerald-600 dark:text-emerald-400';
+      } else {
+        devEl.innerText = `${dev.toFixed(2)} (OVER)`;
+        devEl.className = 'font-semibold text-rose-600 dark:text-rose-400';
+      }
+      document.getElementById('calc-cost-val').innerText = 'Rp ' + cost.toLocaleString('id-ID');
+    }
+
+    // Live Clock
+    function updateClock() {
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')} WIB`;
+      const timeEl = document.getElementById('live-time');
+      if (timeEl) timeEl.innerText = timeStr;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initMaps();
+      initTempChart();
+    });
+  </script>
+</body>
+</html>
